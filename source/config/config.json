@@ -1,0 +1,66 @@
+{
+    "BOT_INFO": {
+        "COMMAND_QQ_ID": {
+            "value": 0,
+            "default_value": 0,
+            "type": "int",
+            "help": "发布和审核帖子的机器人QQ账号"
+        }
+    },
+    "CONFESSION": {
+        "MAX_POST": {
+            "value": 9,
+            "default_value": 9,
+            "type": "int",
+            "help": "空间一条消息发送的最大消息数（一个效果图、视频都算一条消息）"
+        },
+        "MAX_DELAY_TIME": {
+            "value": 120,
+            "default_value": 120,
+            "type": "int",
+            "help": "帖子审核通过后等待未发送帖子数达到最大值的最大时长，单位为分钟"
+        }
+    },
+    "BOT_UPDATE": {
+        "AUTO_UPDATE": {
+            "value": true,
+            "default_value": true,
+            "type": "bool",
+            "help": "自动更新"
+        },
+        "AUTO_RESTART": {
+            "value": true,
+            "default_value": true,
+            "type": "bool",
+            "help": "更新完毕自动重启"
+        },
+        "RELEASES_URL": {
+            "value": "https://github.com/qzqzcsclub/ConfessionBot/releases",
+            "default_value": "https://github.com/qzqzcsclub/ConfessionBot/releases",
+            "type": "str",
+            "help": "获取更新的仓库版本页链接"
+        },
+        "PROXY": {
+            "value": "",
+            "default_value": "",
+            "type": "str",
+            "help": "更新机器人使用的代理地址(访问GitHub)"
+        }
+    },
+    "RELEASES": {
+        "RELEASES": {
+            "value": "stable",
+            "default_value": "stable",
+            "type": "str",
+            "help": "使用的机器人版本"
+        }
+    },
+    "OTHER": {
+        "ERROR_ALERT": {
+            "value": true,
+            "default_value": true,
+            "type": "bool",
+            "help": "重大报错是否QQ私聊提醒机器人维护者"
+        }
+    }
+}

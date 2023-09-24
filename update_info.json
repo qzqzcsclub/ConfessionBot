@@ -1,0 +1,29 @@
+{
+    "file": {
+        "update_file": [
+            "README.md",
+            "plugins/basic_plugins",
+            "plugins/plugins",
+            "poetry.lock",
+            "pyproject.toml",
+            "source/config/config.json",
+            "utils"
+        ],
+        "add_file": [],
+        "delete_file": [],
+        "move_file": []
+    },
+    "config": {
+        "bot": {
+            "add_bot_config": [],
+            "delete_bot_config": [],
+            "move_bot_config": []
+        },
+        "nonebot": {
+            "nb_config_desc": ""
+        }
+    },
+    "desc": {
+        "update_desc": ""
+    }
+}
