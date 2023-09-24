@@ -75,7 +75,7 @@
 
 ### 开发者
 
-感谢以下开发者对 NoneBot2 作出的贡献：
+感谢以下开发者对 ConfessionBot 作出的贡献：
 
 <a href="https://github.com/qzqzcsclub/ConfessionBot/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=qzqzcsclub/ConfessionBot&max=1000" />
