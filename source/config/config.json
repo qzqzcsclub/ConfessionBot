@@ -1,10 +1,10 @@
 {
     "BOT_INFO": {
         "COMMAND_QQ_ID": {
-            "value": 0,
-            "default_value": 0,
-            "type": "int",
-            "help": "发布和审核帖子的机器人QQ账号"
+            "value": [],
+            "default_value": [],
+            "type": "list",
+            "help": "发布和审核帖子的机器人QQ账号(可填写多个)"
         }
     },
     "CONFESSION": {
@@ -21,7 +21,45 @@
             "help": "帖子审核通过后等待未发送帖子数达到最大值的最大时长，单位为分钟"
         }
     },
+    "DATABASE":{
+        "DATABASE": {
+            "value": "confession",
+            "default_value": "confession",
+            "type": "str",
+            "help": "数据库名称"
+        },
+        "USER": {
+            "value": "postgres",
+            "default_value": "postgres",
+            "type": "str",
+            "help": "数据库用户名"
+        },
+        "PASSWORD": {
+            "value": "",
+            "default_value": "",
+            "type": "str",
+            "help": "数据库密码"
+        },
+        "HOST": {
+            "value": "127.0.0.1",
+            "default_value": "127.0.0.1",
+            "type": "str",
+            "help": "数据库ip地址"
+        },
+        "PORT": {
+            "value": 5432,
+            "default_value": 5432,
+            "type": "int",
+            "help": "数据库端口"
+        }
+    },
     "BOT_UPDATE": {
+        "RELEASES": {
+            "value": "stable",
+            "default_value": "stable",
+            "type": "str",
+            "help": "使用的机器人版本"
+        },
         "AUTO_UPDATE": {
             "value": true,
             "default_value": true,
@@ -45,14 +83,6 @@
             "default_value": "",
             "type": "str",
             "help": "更新机器人使用的代理地址(访问GitHub)"
-        }
-    },
-    "RELEASES": {
-        "RELEASES": {
-            "value": "stable",
-            "default_value": "stable",
-            "type": "str",
-            "help": "使用的机器人版本"
         }
     },
     "OTHER": {

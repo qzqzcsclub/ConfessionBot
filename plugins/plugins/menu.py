@@ -76,6 +76,6 @@ async def _(bot: Bot, event: PrivateMessageEvent):
 # 未匹配的消息响应体
 @other.handle()
 async def _(bot: Bot, event: PrivateMessageEvent):
-    data = f"请发送“功能”查看{list(bot.config.nickname)[0]}功能说明\n防封编码:"
+    data = f"请发送“帮助”查看{list(bot.config.nickname)[0]}功能说明\n防封编码:"
     data += str(random.randint(10000, 99999))
     await other.finish(data)

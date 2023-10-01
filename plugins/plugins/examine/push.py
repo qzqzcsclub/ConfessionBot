@@ -1,18 +1,18 @@
-from nonebot import get_bot, logger, require
+from nonebot import logger, require, get_driver
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
 require("nonebot_plugin_apscheduler")
 
 import datetime
-import sqlite3
 from pathlib import Path
 
 import ujson as json
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
+from utils.api_qq import send_private_msg
 
-from utils.database import database_audit_init, database_unverified_post_init
+from utils.database import database_connect, database_audit_init, database_unverified_post_init
 
 
 async def push_handle(auditor, post_id):
@@ -20,21 +20,14 @@ async def push_handle(auditor, post_id):
     将指定帖子推送给指定审核人员
     '''
     # 连接数据库
-    database_examine_path = Path() / "post" / "database" / "database.db"
-    database_examine_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_examine_path)
-    c = conn.cursor()
+    conn = await database_connect()
 
     # 获取帖子数据
-    c.execute("SELECT user_id, path_pic_post, path_post_data, have_video FROM unverified_post WHERE id = ?", (post_id,))
-    row = c.fetchone()
+    row = await conn.fetchrow("SELECT user_id, path_pic_post, path_post_data, have_video FROM unverified_post WHERE id = $1", post_id)
     user_id = int(row[0])
     path_pic_post = Path(row[1])
     path_post_data = Path(row[2])
     have_video = bool(row[3])
-    qq_id = Config.get_value("bot_info", "command_qq_id")
-
-    bot = get_bot(qq_id)
 
     # 有视频就发视频
     if have_video:
@@ -52,7 +45,7 @@ async def push_handle(auditor, post_id):
             for i in range(3):
                 try:
                     video_file = post_video["file"]
-                    await bot.send_private_msg(
+                    await send_private_msg(
                         user_id=user_id,
                         message=MessageSegment.video(video_file, timeout=100)
                     )
@@ -62,7 +55,7 @@ async def push_handle(auditor, post_id):
                         video_file = post_video["file"]
                         video_url = post_video["url"]
                         logger.error(f"发送视频失败,视频所属帖子ID: {post_id} ,视频地址: {str(video_file)} ,报错信息: {str(e)}")
-                        await bot.send_private_msg(
+                        await send_private_msg(
                                 user_id=user_id,
                                 message=f"发送视频失败,视频所属帖子ID: {post_id} \n视频链接: {video_url}\n如果持续出现该问题请联系机器人维护者"
                             )
@@ -72,7 +65,7 @@ async def push_handle(auditor, post_id):
     # 尝试发送文字和帖子效果图3次，失败就结束此次推送
     for i in range(3):
         try:
-            await bot.send_private_msg(
+            await send_private_msg(
                 user_id=user_id,
                 message=send_message
             )
@@ -80,7 +73,7 @@ async def push_handle(auditor, post_id):
         except Exception as e:
             if i == 2:
                 logger.error(f"帖子效果图发送失败,帖子推送失败,帖子ID: {post_id} ,报错信息: {str(e)}")
-                await bot.send_private_msg(
+                await send_private_msg(
                     user_id=user_id,
                     message=f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,如果问题重复出现请联系机器人维护者"
                 )
@@ -94,24 +87,20 @@ async def push_handle(auditor, post_id):
                 return None
     
     # 更新数据库信息
-    c.execute(
-        """UPDATE audit SET is_examining = True WHERE id = ?""",
-        (auditor,)
+    await conn.execute(
+        "UPDATE audit SET is_examining = True WHERE id = $1", auditor)
+    await conn.execute(
+        "UPDATE audit SET examining_post_id = $1 WHERE id = $2",
+        post_id, auditor
     )
-    c.execute(
-        """UPDATE audit SET examining_post_id = ? WHERE id = ?""",
-        (post_id, auditor)
+    await conn.execute(
+        "UPDATE unverified_post SET examine_begin_time = $1 WHERE id = $2",
+        str(datetime.datetime.now()), post_id
     )
-    c.execute(
-        """UPDATE unverified_post SET examine_begin_time = ? WHERE id = ?""",
-        (str(datetime.datetime.now()), post_id)
-    )
-    c.execute("SELECT auditor_number FROM unverified_post")
-    row = c.fetchone()
+    row = await conn.fetchrow("SELECT auditor_number FROM unverified_post WHERE id = $1", post_id)
     auditor_number = row[0] + 1
-    c.execute("UPDATE post_info SET auditor_number = ?", (auditor_number,))
-    conn.commit()
-    conn.close()
+    await conn.execute("UPDATE unverified_post SET auditor_number = $1 WHERE id = $2", auditor_number, post_id)
+    await conn.close()
 
 
 async def push():
@@ -122,70 +111,55 @@ async def push():
     await database_audit_init()
 
     # 连接数据库
-    database_examine_path = Path() / "post" / "database" / "database.db"
-    database_examine_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_examine_path)
-    c = conn.cursor()
+    conn = await database_connect()
 
     # 查询audit表的行数
-    c.execute("SELECT COUNT(*) FROM audit")
-    check_result = c.fetchone()
+    row = await conn.fetchrow("SELECT COUNT(*) FROM audit")
     # 获取行数并判断是否为0
-    has_data = check_result[0] > 0
-    if not has_data:
-        conn.close()
+    have_data = row[0] > 0
+    if not have_data:
+        await conn.close()
         logger.warning("审核组无成员,无法完成帖子审核")
-        qq_id = Config.get_value("bot_info", "command_qq_id")
-        bot = get_bot(qq_id)
-        for superuser in list(bot.config.superusers):
-            await bot.send_private_msg(
+        for superuser in list(get_driver().config.superusers):
+            await send_private_msg(
                     user_id=int(superuser),
                     message="审核组无成员,无法完成帖子审核"
                 )
         # 审核组无成员时结束处理
         return None
     
-    c.execute("SELECT id FROM audit WHERE is_examining = 0")
-    rows = c.fetchall()
+    rows = await conn.fetch("SELECT id FROM audit WHERE is_examining = 0")
     if rows:
         free_audit = [row[0] for row in rows]
     else:
-        conn.close()
+        await conn.close()
         # 审核组无空闲成员时结束处理
         return None
 
+    # 初始化数据库 unverified_post 表
     await database_unverified_post_init()
-        
+    
     # 查询 unverified_post 表的行数
-    c.execute("SELECT COUNT(*) FROM unverified_post")
-    check_result = c.fetchone()
+    row = await conn.fetchrow("SELECT COUNT(*) FROM unverified_post")
     # 获取行数并判断是否为0
-    has_data = check_result[0] > 0
-    if not has_data:
+    have_data = row[0] > 0
+    if not have_data:
+        await conn.close()
         # 无审核的帖子时结束处理
         return None
     
     # 获取 unverified_post 表中的数据至字典
-    c.execute("SELECT * FROM unverified_post ORDER BY commit_time ASC")
-    rows = c.fetchall()
-    c.execute("PRAGMA table_info(unverified_post)")
-    columns = [column[1] for column in c.fetchall()]
-    data_list = []
-    for row in rows:
-        data_dict = {}
-        for i, value in enumerate(row):
-            column_name = columns[i]
-            data_dict[column_name] = value
-        data_list.append(data_dict)
+    rows = await conn.fetch("SELECT * FROM unverified_post ORDER BY commit_time ASC")
+    data_list = [dict(row) for row in  rows]
 
     # 帖子发布时间越早越优先处理
     for post in data_list:
         add_auditor_number = int(post["max_auditor_number"]) - int(post["auditor_number"])
         if not add_auditor_number:
             pass
-        for i in range(add_auditor_number):
+        for _ in range(add_auditor_number):
             if not free_audit:
-                conn.close()
+                await conn.close()
                 # 审核组无空闲成员时结束处理
                 return None
             auditor = free_audit.pop()
@@ -200,32 +174,19 @@ async def post_data_update():
     await database_unverified_post_init()
 
     # 连接数据库
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
+    conn = await database_connect()
 
     # 查询unverified_post表的行数
-    c.execute("SELECT COUNT(*) FROM unverified_post")
-    check_result = c.fetchone()
+    row = await conn.fetchrow("SELECT COUNT(*) FROM unverified_post")
     # 获取行数并判断是否为0
-    has_data = check_result[0] > 0
-    if not has_data:
+    have_data = row[0] > 0
+    if not have_data:
         # 无审核的帖子时结束处理
         return None
     
     # 获取unverified_post表中的数据至字典
-    c.execute("SELECT * FROM unverified_post ORDER BY commit_time ASC")
-    rows = c.fetchall()
-    c.execute("PRAGMA table_info(unverified_post)")
-    columns = [column[1] for column in c.fetchall()]
-    data_list = []
-    for row in rows:
-        data_dict = {}
-        for i, value in enumerate(row):
-            column_name = columns[i]
-            data_dict[column_name] = value
-        data_list.append(data_dict)
+    rows = await conn.fetch("SELECT * FROM unverified_post ORDER BY commit_time ASC")
+    data_list = [dict(row) for row in rows]
 
     # 帖子最大同时审核人数随审核组未审核时间动态变化
     for post in data_list:
@@ -243,12 +204,11 @@ async def post_data_update():
                 if minutes_difference <= minute:
                     break
                 n += 1
-            c.execute(
-                """UPDATE unverified_post SET max_auditor_number = ? WHERE id = ?""",
-                (n, post["id"]),
+            await conn.execute(
+                "UPDATE unverified_post SET max_auditor_number = $1 WHERE id = $2",
+                n, post["id"]
             )
-    conn.commit()
-    conn.close()
+    await conn.close()
             
 
 # 定时推送帖子

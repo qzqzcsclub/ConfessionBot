@@ -1,22 +1,41 @@
-import sqlite3
 from pathlib import Path
 
+import asyncpg
 import ujson as json
+from nonebot import logger
+
+from utils.config import Config
+
+
+async def database_connect():
+    '''
+    连接数据库
+    '''
+    database = Config.get_value("database", "database")
+    user = Config.get_value("database", "user")
+    password = Config.get_value("database", "password")
+    host = Config.get_value("database", "host")
+    port = Config.get_value("database", "port")
+    conn = await asyncpg.connect(database=database, user=user, password=password, host=host, port=port)
+    logger.trace("连接数据库成功")
+    return conn
 
 
 async def database_audit_init():
     '''
     初始化数据库 audit 表
     '''
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    c.execute(
+    conn = await database_connect()
+    await conn.execute(
         """CREATE TABLE IF NOT EXISTS audit (
             id INTEGER,
             is_examining BOOL,
             examining_post_id TEXT
+            )"""
+    )
+    await conn.execute(
+        """CREATE TABLE IF NOT EXISTS temp_audit (
+            id INTEGER
             )"""
     )
 
@@ -32,30 +51,45 @@ async def database_audit_init():
     audit_data = list(set(audit_data))
 
     # 将id列表插入临时表
-    c.executemany("""INSERT INTO temp_audit (id) VALUES (?)""", [(user_id,) for user_id in audit_data])
+    await conn.executemany("INSERT INTO temp_audit (id) VALUES ($1)", [(user_id,) for user_id in audit_data])
     # 更新audit表，不覆盖已存在的id
-    c.execute(
+    await conn.execute(
         """INSERT OR IGNORE INTO audit (id, is_examining, examining_post_id)
         SELECT id, is_examining, examining_post_id FROM temp_audit"""
     )
     # 删除audit表中不存在于用户id列表的id所在的行
-    c.execute("""DELETE FROM audit WHERE id NOT IN (SELECT id FROM temp_audit)""")
+    await conn.execute("DELETE FROM audit WHERE id NOT IN (SELECT id FROM temp_audit)")
     # 删除临时表
-    c.execute("DROP TABLE IF EXISTS temp_audit")
+    await conn.execute("DROP TABLE IF EXISTS temp_audit")
 
-    conn.commit()
-    conn.close()
+    await conn.close()
+
+
+async def database_info_init():
+    '''
+    初始化数据库 info 表
+    '''
+    conn = await database_connect()
+    await conn.execute(
+        """CREATE TABLE IF NOT EXISTS info (
+            used_id INTEGER,
+            current_path TEXT
+            )"""
+    )
+
+    count = await conn.fetchrow("SELECT COUNT(*) FROM info")
+    if count == 0:
+        await conn.execute("INSERT INTO info (used_id) VALUES ($1)", 0)
+
+    await conn.close()
 
 
 async def database_unverified_post_init():
     '''
     初始化数据库 unverified_post 表
     '''
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    c.execute(
+    conn = await database_connect()
+    await conn.execute(
         """CREATE TABLE IF NOT EXISTS unverified_post (
             id TEXT,
             commit_time TEXT,
@@ -71,19 +105,15 @@ async def database_unverified_post_init():
             video_number INTEGER
             )"""
     )
-    conn.commit()
-    conn.close()
+    await conn.close()
 
 
 async def database_approved_post_init():
     '''
     初始化数据库 approved_post 表
     '''
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    c.execute(
+    conn = await database_connect()
+    await conn.execute(
         """CREATE TABLE IF NOT EXISTS approved_post (
             id TEXT,
             commit_time TEXT,
@@ -97,19 +127,15 @@ async def database_approved_post_init():
             video_number INTEGER
             )"""
     )
-    conn.commit()
-    conn.close()
+    await conn.close()
 
 
 async def database_disapproved_post_init():
     '''
     初始化数据库 disapproved_post 表
     '''
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    c.execute(
+    conn = await database_connect()
+    await conn.execute(
         """CREATE TABLE IF NOT EXISTS disapproved_post (
             id TEXT,
             commit_time TEXT,
@@ -122,19 +148,15 @@ async def database_disapproved_post_init():
             video_number INTEGER
             )"""
     )
-    conn.commit()
-    conn.close()
+    await conn.close()
 
 
 async def database_unpublished_post_init():
     '''
     初始化数据库 unpublished_post 表
     '''
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    c.execute(
+    conn = await database_connect()
+    await conn.execute(
         """CREATE TABLE IF NOT EXISTS unpublished_post (
             id TEXT,
             commit_time TEXT,
@@ -142,5 +164,4 @@ async def database_unpublished_post_init():
             video_number INTEGER
             )"""
     )
-    conn.commit()
-    conn.close()
+    await conn.close()

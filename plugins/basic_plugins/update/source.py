@@ -17,7 +17,7 @@ from utils.config import Config
 
 driver = get_driver()
 
-release_url = Config.get_value("bot_update", "release_url")
+release_url = Config.get_value("bot_update", "releases_url")
 
 _version_file = Path() / "__version__"
 update_tar_file = Path() / "update_tar_file.tar.gz"
@@ -49,7 +49,7 @@ class NoVersionMatch(Exception):
 
 
 @driver.on_bot_connect
-async def dep_file_handle(bot: Bot):
+async def dep_file_handle():
     '''
     机器人连接时自动生成机器人原始依赖文件和用户依赖文件
     文件位于 /source/dep/
@@ -143,7 +143,7 @@ async def check_update(bot: Bot) -> Tuple[int, str]:
                 if _version == releases["name"]:
                     version_match = True
                     break
-                if not releases["prerelease"] or Config.get_value("releases", "releases") == "dev":
+                if not releases["prerelease"] or Config.get_value("bot_update", "releases") == "dev":
                     releases_version = releases["name"]
                     tar_gz_url = releases["tarball_url"]
                     update_info = releases["body"]

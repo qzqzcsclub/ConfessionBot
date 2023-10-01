@@ -1,10 +1,8 @@
-import sqlite3
-from pathlib import Path
-
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, PrivateMessageEvent
 
 from utils.database import (
+    database_connect,
     database_approved_post_init, 
     database_audit_init,
     database_disapproved_post_init,
@@ -38,26 +36,21 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     await database_audit_init()
 
     # 连接数据库
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
+    conn = await database_connect()
+
+    audit_id = int(event.get_session_id())
 
     # 获取数据库信息
-    audit_id = int(event.get_session_id())
-    c.execute("SELECT is_examining, examining_post_id FROM audit WHERE id = ?", (audit_id,))
-    row = c.fetchone()
+    row = await conn.fetchrow("SELECT is_examining, examining_post_id FROM audit WHERE id = $1", audit_id)
     is_examining = bool(row[0])
     examining_post_id = str(row[1])
 
     if not is_examining:
         await examine_pass.finish("当前无待审核的帖子")
-
+    
     # 将数据库里对应的帖子信息存储到字典中
-    c.execute("SELECT * FROM unverified_post WHERE id=?", (examining_post_id,))
-    row = c.fetchone()
-    columns = [column[0] for column in c.description]
-    post_data = dict(zip(columns, row))
+    row = await conn.fetchrow("SELECT * FROM unverified_post WHERE id=$1", examining_post_id)
+    post_data = dict(row)
 
     # 初始化数据库 approved_post 表
     await database_approved_post_init()
@@ -65,18 +58,19 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     await database_unpublished_post_init()
 
     # 数据库数据更新
-    c.execute(
+    await conn.executemany(
         """INSERT INTO approved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, status_post, have_video, video_number)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
         (examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["status_post"], post_data["have_video"], post_data["video_number"])
     )
-    c.execute(
+    await conn.executemany(
         """INSERT INTO unpublished_post (id, commit_time, have_video, video_number)
-        VALUES (?, ?, ?, ?)""",
+        VALUES ($1, $2, $3, $4)""",
         (examining_post_id, post_data["commit_time"], post_data["have_video"], post_data["video_number"])
     )
-    c.execute("DELETE FROM unverified_post WHERE id=?", (examining_post_id,))
-    c.execute("UPDATE audit SET is_examining=?, examining_post_id=? WHERE id=?", (False, None, audit_id))
+    await conn.execute("DELETE FROM unverified_post WHERE id=$1", examining_post_id)
+    await conn.execute("UPDATE audit SET is_examining=$1, examining_post_id=$2 WHERE id=$3", False, None, audit_id)
+    await conn.close()
 
     await examine_pass.send(f"帖子id: {examining_post_id} ,通过")
     
@@ -93,15 +87,11 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     await database_audit_init()
 
     # 连接数据库
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
+    conn = await database_connect()
 
-    # 获取数据库信息
     audit_id = int(event.get_session_id())
-    c.execute("SELECT is_examining, examining_post_id FROM audit WHERE id = ?", (audit_id,))
-    row = c.fetchone()
+    # 获取数据库信息
+    row = await conn.fetchrow("SELECT is_examining, examining_post_id FROM audit WHERE id = $1", audit_id)
     is_examining = bool(row[0])
     examining_post_id = str(row[1])
 
@@ -109,22 +99,21 @@ async def _(bot: Bot, event: PrivateMessageEvent):
         await examine_pass.finish("当前无待审核的帖子")
 
     # 将数据库里对应的帖子信息存储到字典中
-    c.execute("SELECT * FROM unverified_post WHERE id=?", (examining_post_id,))
-    row = c.fetchone()
-    columns = [column[0] for column in c.description]
-    post_data = dict(zip(columns, row))
+    row = await conn.fetchrow("SELECT * FROM unverified_post WHERE id=$1", examining_post_id)
+    post_data = dict(row)
 
     # 初始化数据库 disapproved_post 表
     await database_disapproved_post_init()
 
     # 数据库数据更新
-    c.execute(
+    await conn.executemany(
         """INSERT INTO disapproved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, have_video, video_number)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        VALUES ($1, $1, $3, $4, $5, $6, $7, $8, $9)""",
         (examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["have_video"], post_data["video_number"])
     )
-    c.execute("DELETE FROM unverified_post WHERE id=?", (examining_post_id,))
-    c.execute("UPDATE audit SET is_examining=?, examining_post_id=? WHERE id=?", (False, None, audit_id))
+    await conn.execute("DELETE FROM unverified_post WHERE id=$1", examining_post_id)
+    await conn.execute("UPDATE audit SET is_examining=$1, examining_post_id=$2 WHERE id=$3", False, None, audit_id)
+    await conn.close()
 
     await examine_pass.send(f"帖子id: {examining_post_id} ,不通过")
 

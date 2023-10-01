@@ -4,13 +4,13 @@ from nonebot_adapters_qzone import Message, MessageSegment
 require("nonebot_plugin_apscheduler")
 
 import datetime
-import sqlite3
 from pathlib import Path
 
 import ujson as json
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
+from utils.database import database_connect
 
 
 async def post():
@@ -20,23 +20,11 @@ async def post():
     bot = get_bot("qzone")
 
     # 连接数据库
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    
+    conn = await database_connect()
+
     # 获取 unpublished_post 表中的数据到字典中
-    c.execute("SELECT * FROM unpublished_post ORDER BY commit_time ASC")
-    rows = c.fetchall()
-    c.execute("PRAGMA table_info(unpublished_post)")
-    columns = [column[1] for column in c.fetchall()]
-    data_list = []
-    for row in rows:
-        data_dict = {}
-        for i, value in enumerate(row):
-            column_name = columns[i]
-            data_dict[column_name] = value
-        data_list.append(data_dict)
+    rows = await conn.fetch("SELECT * FROM unpublished_post ORDER BY commit_time ASC")
+    data_list = [dict(row) for row in rows]
     
     # 循环以确保所有符合条件的帖子发出
     while data_list:
@@ -72,8 +60,7 @@ async def post():
             msg_data = Message()
             for post in data_list[0:post_number]:
                 post_id = post["id"]
-                c.execute("SELECT path_pic_post, path_post_data FROM approved_post WHERE id=?", (post_id,))
-                row = c.fetchone()
+                row = await conn.fetchrow("SELECT path_pic_post, path_post_data FROM approved_post WHERE id=$1", post_id)
                 path_pic_post, path_post_data = row
                 path_post_data = Path(path_post_data)
                 path_pic_post = Path(path_pic_post).as_uri()
@@ -108,14 +95,15 @@ async def post():
             
             # 数据库信息更新
             for post in data_list[0:post_number]:
-                c.execute("DELETE FROM unpublished_post WHERE id=?", (post["id"],))
-                c.execute("UPDATE approved_post SET status_post=? WHERE id=?", (True, post["id"]))
+                await conn.execute("DELETE FROM unpublished_post WHERE id=$1", post["id"])
+                await conn.execute("UPDATE approved_post SET status_post=$1 WHERE id=$2", True, post["id"])
 
             #删除已发送的帖子信息，继续循环处理剩余数据
             del data_list[:post_number]
+    await conn.close()
             
 
 # 定时检测并发送动态
 scheduler.add_job(
-    post, "interval", minutes=10, id="active_push"
+    post, "interval", minutes=10, id="active_post"
 )

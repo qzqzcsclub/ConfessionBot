@@ -3,7 +3,6 @@ from nonebot import logger, on_command, require
 require("nonebot_plugin_htmlrender")
 
 import io
-import sqlite3
 from pathlib import Path
 
 import filetype
@@ -16,7 +15,7 @@ from nonebot_plugin_htmlrender import md_to_pic
 from PIL import Image
 
 from plugins.plugins.examine import push
-from utils.database import database_unverified_post_init
+from utils.database import database_connect, database_unverified_post_init, database_info_init
 
 
 post = on_command(
@@ -34,25 +33,28 @@ async def _(event: PrivateMessageEvent, state: T_State, args: Message = CommandA
     if not args:
         state["post_type"] = 0 # post_type默认为0(对话)
         state["status_anon"] = 2 # status_anon默认为2(实名)
-    args.include("text")
-
-    if args[0].data["text"] == "对话":
-        state["post_type"] = 0
-    elif args[0].data["text"] == "文章":
-        state["post_type"] = 1
     else:
-        bad_arg = args[0].data["text"]
-        await post.finish(f"参数“{bad_arg}”不合法，应为“对话”或“文章”")
+        args.include("text")
 
-    if args[1].data["text"] == "匿名":
-        state["status_anon"] = 0
-    elif args[1].data["text"] == "半实名":
-        state["status_anon"] = 1
-    elif args[1].data["text"] == "实名":
-        state["status_anon"] = 2
-    else:
-        bad_arg = args[1].data["text"]
-        await post.finish(f"参数“{bad_arg}”不合法，应为“匿名”或“半实名”或“实名”")
+        if args[0].data["text"] == "对话":
+            state["post_type"] = 0
+        elif args[0].data["text"] == "文章":
+            state["post_type"] = 1
+        else:
+            bad_arg = args[0].data["text"]
+            await post.finish(f"参数“{bad_arg}”不合法，应为“对话”或“文章”")
+
+        if args[1].data["text"] == "匿名":
+            state["status_anon"] = 0
+        elif args[1].data["text"] == "半实名":
+            state["status_anon"] = 1
+        elif args[1].data["text"] == "实名":
+            state["status_anon"] = 2
+        else:
+            bad_arg = args[1].data["text"]
+            await post.finish(f"参数“{bad_arg}”不合法，应为“匿名”或“半实名”或“实名”")
+
+        await post.send("请发送帖子消息")
 
 
 @post.receive("handle")
@@ -93,17 +95,13 @@ async def _(event: PrivateMessageEvent, state: T_State, received_event: Event = 
         if msg[0].data["text"] == "提交":
             # 将帖子数据保存到数据库
             await database_unverified_post_init()
-            database_path = Path() / "post" / "database" / "database.db"
-            database_path.parent.mkdir(exist_ok=True, parents=True)
-            conn = sqlite3.connect(database_path)
-            c = conn.cursor()
-            c.execute(
+            conn = await database_connect()
+            await conn.executemany(
                 """INSERT INTO unverified_post (id, commit_time, examine_begin_time, user_id, path_pic_post, path_post_data, post_type, status_anon, auditor_number, max_auditor_number, have_video, video_number)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
                 (state["post_id"], event.time, None, event.get_user_id(), state["path_pic_post"], state["path_post_data"], state["post_type"], state["status_anon"], 0, 1, state["have_video"], state["video_number"])
             )
-            conn.commit()
-            conn.close()
+            await conn.close()
             await post.send("帖子提交审核成功，审核通过后帖子会发布到空间，请耐心等待，谢谢配合！")
             await push()
     await post.finish("已取消操作...")
@@ -118,29 +116,17 @@ async def post_handle(bot, event, state):
     user_name = bot.call_api("get_stranger_info", user_id = int(user_id))["nickname"]
 
     # 生成帖子的 id
-    database_path = Path() / "post" / "database" / "database.db"
-    database_path.parent.mkdir(exist_ok=True, parents=True)
-    conn = sqlite3.connect(database_path)
-    c = conn.cursor()
-    c.execute(
-        """CREATE TABLE IF NOT EXISTS post_info (
-            used_id INTEGER
-            )"""
-    )
-    c.execute("SELECT used_id FROM post_info")
-    row = c.fetchone()
-    if row is None:
-        post_id = 1
-    else:
-        post_id = int(row[0]) + 1
-    c.execute(
-        """UPDATE post_info SET used_id = ?""", 
-        (post_id,)
-    )
+
+    # 初始化数据库中的 info 表
+    await database_info_init()
+    # 连接数据库
+    conn = await database_connect()
+    row = await conn.fetchrow("SELECT used_id FROM info")
+    post_id = int(row[0]) + 1
+    await conn.execute("UPDATE info SET used_id = $1", post_id)
     post_id = str(post_id)
     state["post_id"] = post_id
-    conn.commit()
-    conn.close()
+    await conn.close()
 
     if state["status_anon"] == 0:
         data_md += "***FROM： 匿名用户***\n\n---\n\n"
@@ -190,7 +176,7 @@ async def post_handle(bot, event, state):
                                     "type": "image",
                                     "data":{
                                         "url": segment.data["url"],
-                                        "file": str(path_image)
+                                        "file": str(path_image.relative_to(Path.cwd())) # 保存相对路径
                                     }
                                 }
                                 break
@@ -233,7 +219,7 @@ async def post_handle(bot, event, state):
                                     "type": "video",
                                     "data":{
                                         "url": segment.data["url"],
-                                        "file": str(path_video)
+                                        "file": str(path_video.relative_to(Path.cwd())) # 保存相对路径
                                     }
                                 }
                                 break
@@ -286,7 +272,7 @@ async def post_handle(bot, event, state):
                                     "type": "image",
                                     "data":{
                                         "url": segment.data["url"],
-                                        "file": str(path_image)
+                                        "file": str(path_image.relative_to(Path.cwd())) # 保存相对路径
                                     }
                                 }
                                 break
@@ -325,8 +311,8 @@ async def post_handle(bot, event, state):
     pic = await md_to_pic(md=data_md, width=400)
     path_pic_post = Path() / "data" / "post" / post_id / "post.png"
     path_post_data = Path() / "data" / "post" / post_id / "post.json"
-    state["path_pic_post"] = str(path_pic_post)
-    state["path_post_data"] = path_post_data
+    state["path_pic_post"] = str(path_pic_post.relative_to(Path.cwd())) # 保存相对路径
+    state["path_post_data"] = str(path_post_data.relative_to(Path.cwd())) # 保存相对路径
     a = Image.open(io.BytesIO(pic))
     a.save(path_pic_post, format="PNG")
 

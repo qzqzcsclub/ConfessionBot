@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import ujson as json
@@ -11,12 +12,15 @@ async def audit_checker(event: Event):
     '''
     audit_data_file = Path() / "data" / "audit.json"
     audit_data_file.parent.mkdir(exist_ok=True, parents=True)
+    if not os.path.exists(audit_data_file):
+        with open(audit_data_file, 'w', encoding="utf-8") as f:
+            f.write("[]")
     with open(audit_data_file, "r", encoding="utf-8") as f:
-        audit_data = json.load(f)
-    if event.get_session_id() in audit_data:
-        return True
-    else:
-        return False
+        audit_data = json.loads(f.read())
+    for i in audit_data:
+        if str(event.get_session_id()) == str(i):
+            return True
+    return False
 
 async def admin_checker(event: Event):
     '''
@@ -24,12 +28,15 @@ async def admin_checker(event: Event):
     '''
     admin_data_file = Path() / "data" / "admin.json"
     admin_data_file.parent.mkdir(exist_ok=True, parents=True)
+    if not os.path.exists(admin_data_file):
+        with open(admin_data_file, 'w', encoding="utf-8") as f:
+            f.write("[]")
     with open(admin_data_file, "r", encoding="utf-8") as f:
-        admin_data = json.load(f)
-    if event.get_session_id() in admin_data:
-        return True
-    else:
-        return False
+        admin_data = json.loads(f.read())
+    for i in admin_data:
+        if str(event.get_session_id()) == str(i):
+            return True
+    return False
 
 # 审核组权限
 AUDIT = Permission(audit_checker, admin_checker)
