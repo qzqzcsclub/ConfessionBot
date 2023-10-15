@@ -58,15 +58,15 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     await database_unpublished_post_init()
 
     # 数据库数据更新
-    await conn.executemany(
+    await conn.execute(
         """INSERT INTO approved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, status_post, have_video, video_number)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
-        (examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["status_post"], post_data["have_video"], post_data["video_number"])
+        examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["status_post"], post_data["have_video"], post_data["video_number"]
     )
-    await conn.executemany(
+    await conn.execute(
         """INSERT INTO unpublished_post (id, commit_time, have_video, video_number)
         VALUES ($1, $2, $3, $4)""",
-        (examining_post_id, post_data["commit_time"], post_data["have_video"], post_data["video_number"])
+        examining_post_id, post_data["commit_time"], post_data["have_video"], post_data["video_number"]
     )
     await conn.execute("DELETE FROM unverified_post WHERE id=$1", examining_post_id)
     await conn.execute("UPDATE audit SET is_examining=$1, examining_post_id=$2 WHERE id=$3", False, None, audit_id)
@@ -106,10 +106,10 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     await database_disapproved_post_init()
 
     # 数据库数据更新
-    await conn.executemany(
+    await conn.execute(
         """INSERT INTO disapproved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, have_video, video_number)
         VALUES ($1, $1, $3, $4, $5, $6, $7, $8, $9)""",
-        (examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["have_video"], post_data["video_number"])
+        examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["have_video"], post_data["video_number"]
     )
     await conn.execute("DELETE FROM unverified_post WHERE id=$1", examining_post_id)
     await conn.execute("UPDATE audit SET is_examining=$1, examining_post_id=$2 WHERE id=$3", False, None, audit_id)

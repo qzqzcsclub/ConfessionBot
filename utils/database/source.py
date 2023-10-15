@@ -72,7 +72,7 @@ async def database_info_init():
     conn = await database_connect()
     await conn.execute(
         """CREATE TABLE IF NOT EXISTS info (
-            used_id INTEGER,
+            used_id TEXT,
             current_path TEXT
             )"""
     )
@@ -94,7 +94,7 @@ async def database_unverified_post_init():
             id TEXT,
             commit_time TEXT,
             examine_begin_time TEXT,
-            user_id INTEGER,
+            user_id TEXT,
             path_pic_post TEXT,
             path_post_data TEXT,
             post_type INTEGER,
@@ -117,7 +117,7 @@ async def database_approved_post_init():
         """CREATE TABLE IF NOT EXISTS approved_post (
             id TEXT,
             commit_time TEXT,
-            user_id INTEGER,
+            user_id TEXT,
             path_pic_post TEXT,
             path_post_data TEXT,
             post_type INTEGER,
@@ -139,7 +139,7 @@ async def database_disapproved_post_init():
         """CREATE TABLE IF NOT EXISTS disapproved_post (
             id TEXT,
             commit_time TEXT,
-            user_id INTEGER,
+            user_id TEXT,
             path_pic_post TEXT,
             path_post_data TEXT,
             post_type INTEGER,
