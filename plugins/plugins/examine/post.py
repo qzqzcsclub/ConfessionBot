@@ -17,8 +17,6 @@ async def post():
     '''
     检测并发送动态
     '''
-    bot = get_bot("qzone")
-
     # 连接数据库
     conn = await database_connect()
 
@@ -86,6 +84,7 @@ async def post():
             # 动态发送尝试三次
             for i in range(3):
                 try:
+                    bot = get_bot("qzone")
                     bot.send(msg_data)
                     break
                 except:

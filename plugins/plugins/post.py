@@ -35,26 +35,27 @@ async def _(event: PrivateMessageEvent, state: T_State, args: Message = CommandA
         state["status_anon"] = 2 # status_anon默认为2(实名)
     else:
         args.include("text")
+        msg = args[0].data["text"].split()
 
-        if args[0].data["text"] == "对话":
+        if msg[0] == "对话":
             state["post_type"] = 0
-        elif args[0].data["text"] == "文章":
+        elif msg[0] == "文章":
             state["post_type"] = 1
         else:
-            bad_arg = args[0].data["text"]
+            bad_arg = msg[0]
             await post.finish(f"参数“{bad_arg}”不合法，应为“对话”或“文章”")
 
-        if args[1].data["text"] == "匿名":
+        if msg[1] == "匿名":
             state["status_anon"] = 0
-        elif args[1].data["text"] == "半实名":
+        elif msg[1] == "半实名":
             state["status_anon"] = 1
-        elif args[1].data["text"] == "实名":
+        elif msg[1] == "实名":
             state["status_anon"] = 2
         else:
-            bad_arg = args[1].data["text"]
+            bad_arg = msg[1]
             await post.finish(f"参数“{bad_arg}”不合法，应为“匿名”或“半实名”或“实名”")
 
-        await post.send("请发送帖子消息")
+    await post.send("请发送帖子消息,结束时发送“结束”，取消发送“取消”")
 
 
 @post.receive("handle")
@@ -65,18 +66,21 @@ async def _(bot: Bot, event: PrivateMessageEvent, state: T_State, received_event
     msg = received_event.get_message()
     post_msg = state.get("post_msg", "")
     if state["post_type"] == 0:
-        if "text" in msg:
+        if "text" in msg[0].data:
             if msg[0].data["text"] == "结束":
                 await post.send("开始处理数据...")
                 await post_handle(bot, event, state)
+                return None
             elif msg[0].data["text"] == "取消":
                 await post.finish("已取消操作...")
-        else:
-            post_msg += msg
-            state["post_msg"] = post_msg
-            await post.reject()
+        post_msg += msg
+        if post_msg[0].type == "text":
+            if post_msg[0].data["text"] == "":
+                post_msg = post_msg[1:]
+        state["post_msg"] = post_msg
+        await post.reject()
     elif state["post_type"] == 1:
-        if "text" in msg:
+        if "text" in msg[0].data:
             if msg[0].data["text"] == "取消":
                 await post.finish("已取消操作...")
         post_msg = msg
@@ -113,7 +117,8 @@ async def post_handle(bot, event, state):
     '''
     data_md = ""
     user_id = event.get_user_id()
-    user_name = bot.call_api("get_stranger_info", user_id = int(user_id))["nickname"]
+    stranger_info = await bot.call_api("get_stranger_info", user_id = int(user_id))
+    user_name = stranger_info["nickname"]
 
     # 生成帖子的 id
 
@@ -176,7 +181,7 @@ async def post_handle(bot, event, state):
                                     "type": "image",
                                     "data":{
                                         "url": segment.data["url"],
-                                        "file": str(path_image.relative_to(Path.cwd())) # 保存相对路径
+                                        "file": str(path_image) # 保存相对路径
                                     }
                                 }
                                 break
@@ -219,7 +224,7 @@ async def post_handle(bot, event, state):
                                     "type": "video",
                                     "data":{
                                         "url": segment.data["url"],
-                                        "file": str(path_video.relative_to(Path.cwd())) # 保存相对路径
+                                        "file": str(path_video) # 保存相对路径
                                     }
                                 }
                                 break
@@ -272,7 +277,7 @@ async def post_handle(bot, event, state):
                                     "type": "image",
                                     "data":{
                                         "url": segment.data["url"],
-                                        "file": str(path_image.relative_to(Path.cwd())) # 保存相对路径
+                                        "file": str(path_image) # 保存相对路径
                                     }
                                 }
                                 break
@@ -292,34 +297,39 @@ async def post_handle(bot, event, state):
     state["have_video"] = have_video
     state["video_number"] = video_number
     have_big_image = False
-    for segment in state["post_msg"]:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(segment.data["url"])
-            image_data = resp.content
-        image = Image.open(io.BytesIO(image_data))
-        width, _ = image.size
-        image.close()
-        if width >= 640:
-            have_big_image = True
-            msg_image = segment.data["url"]
-            data_md += f'\n\n<div style="text-align: left;"><img src=" {msg_image} "></div>'
+    if "image" in state["post_msg"]:
+        image_msg = state["post_msg"]["image"]
+        for segment in image_msg:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(segment.data["url"])
+                image_data = resp.content
+            image = Image.open(io.BytesIO(image_data))
+            width, _ = image.size
+            image.close()
+            if width >= 640:
+                have_big_image = True
+                msg_image = segment.data["url"]
+                data_md += f'\n\n<div style="text-align: left;"><img src=" {msg_image} "></div>'
     if have_big_image:
         data_md += "\n\n---"
     data_md += f"\n\n***ID: {post_id}***"
     
     # 生成帖子效果图
-    pic = await md_to_pic(md=data_md, width=400)
+    pic = await md_to_pic(md=data_md, width=380)
     path_pic_post = Path() / "data" / "post" / post_id / "post.png"
     path_post_data = Path() / "data" / "post" / post_id / "post.json"
-    state["path_pic_post"] = str(path_pic_post.relative_to(Path.cwd())) # 保存相对路径
-    state["path_post_data"] = str(path_post_data.relative_to(Path.cwd())) # 保存相对路径
-    a = Image.open(io.BytesIO(pic))
-    a.save(path_pic_post, format="PNG")
+    state["path_pic_post"] = str(path_pic_post) # 保存相对路径
+    state["path_post_data"] = str(path_post_data) # 保存相对路径
+
+    # 保存帖子效果图
+    path_pic_post.parent.mkdir(exist_ok=True, parents=True)
+    with open(path_pic_post, "wb") as f:
+        f.write(pic)
 
     # 保存帖子消息数据
+    path_post_data.parent.mkdir(exist_ok=True, parents=True)
     with open(path_post_data, "w", encoding="utf-8") as f:
         json.dump(data_msg, f)
 
-    # 保存帖子效果图
     reply_msg = MessageSegment.image(pic) + MessageSegment.text("帖子效果图生成完毕（视频将会在墙另外发出），确认提交审核请发送“提交”，发送其他任意消息取消")
     await post.send(reply_msg)

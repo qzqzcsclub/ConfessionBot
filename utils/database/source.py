@@ -77,8 +77,8 @@ async def database_info_init():
             )"""
     )
 
-    count = await conn.fetchrow("SELECT COUNT(*) FROM info")
-    if count == 0:
+    row = await conn.fetchrow("SELECT used_id FROM info")
+    if not row:
         await conn.execute("INSERT INTO info (used_id) VALUES ($1)", 0)
 
     await conn.close()
