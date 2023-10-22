@@ -28,39 +28,40 @@ async def database_audit_init():
     conn = await database_connect()
     await conn.execute(
         """CREATE TABLE IF NOT EXISTS audit (
-            id INTEGER,
+            id TEXT,
             is_examining BOOL,
             examining_post_id TEXT
             )"""
     )
-    await conn.execute(
-        """CREATE TABLE IF NOT EXISTS temp_audit (
-            id INTEGER
-            )"""
-    )
 
+    # 获取本地文件的数据
     audit_data_file = Path() / "data" / "audit.json"
     audit_data_file.parent.mkdir(exist_ok=True, parents=True)
     admin_data_file = Path() / "data" / "admin.json"
     admin_data_file.parent.mkdir(exist_ok=True, parents=True)
     with open(audit_data_file, "r", encoding="utf-8") as f:
-        audit_data = json.load(f)
+        audits_data = json.load(f)
     with open(admin_data_file, "r", encoding="utf-8") as f:
-        admin_data = json.load(f)
-    audit_data = audit_data + admin_data
-    audit_data = list(set(audit_data))
+        admins_data = json.load(f)
+    audits_new = audits_data + admins_data
+    audits_new = list(set(audits_new)) # 合并重复的元素
 
-    # 将id列表插入临时表
-    await conn.executemany("INSERT INTO temp_audit (id) VALUES ($1)", [(user_id,) for user_id in audit_data])
-    # 更新audit表，不覆盖已存在的id
-    await conn.execute(
-        """INSERT OR IGNORE INTO audit (id, is_examining, examining_post_id)
-        SELECT id, is_examining, examining_post_id FROM temp_audit"""
-    )
-    # 删除audit表中不存在于用户id列表的id所在的行
-    await conn.execute("DELETE FROM audit WHERE id NOT IN (SELECT id FROM temp_audit)")
-    # 删除临时表
-    await conn.execute("DROP TABLE IF EXISTS temp_audit")
+    # 获取数据库的数据
+    rows = await conn.fetch("SELECT * FROM audit")
+    audits_old = [dict(row) for row in rows]
+    audit_old_id = []
+    for audit_old in audits_old:
+        audit_old_id.append(audit_old["id"])
+
+    # 删除数据库中本地文件没有的数据
+    for audit_old in audits_old:
+        if audit_old["id"] not in audits_new:
+            await conn.execute("DELETE FROM audit WHERE id=$1", audit_old["id"])
+    
+    # 新增数据库中没有的数据
+    for audit_new in audits_new:
+        if audit_new not in audit_old_id:
+            await conn.execute("INSERT INTO audit (id, is_examining) VALUES ($1, $2)", audit_new, False)
 
     await conn.close()
 
@@ -72,7 +73,7 @@ async def database_info_init():
     conn = await database_connect()
     await conn.execute(
         """CREATE TABLE IF NOT EXISTS info (
-            used_id TEXT,
+            used_id INTEGER,
             current_path TEXT
             )"""
     )

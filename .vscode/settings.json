@@ -1,5 +1,9 @@
 {
     "python.languageServer": "Pylance",
     "python.analysis.typeCheckingMode": "basic",
-    "python.linting.enabled": false
+    "python.linting.enabled": false,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.autopep8"
+    },
+    "python.formatting.provider": "none"
 }

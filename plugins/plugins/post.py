@@ -101,14 +101,16 @@ async def _(event: PrivateMessageEvent, state: T_State, received_event: Event = 
             # 将帖子数据保存到数据库
             await database_unverified_post_init()
             conn = await database_connect()
+            commit_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             await conn.execute(
                 """INSERT INTO unverified_post (id, commit_time, examine_begin_time, user_id, path_pic_post, path_post_data, post_type, status_anon, auditor_number, max_auditor_number, have_video, video_number)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
-                state["post_id"], str(datetime.datetime.now()), None, str(event.get_user_id()), state["path_pic_post"], state["path_post_data"], state["post_type"], state["status_anon"], 0, 1, state["have_video"], state["video_number"]
+                state["post_id"], commit_time, None, str(event.get_user_id()), state["path_pic_post"], state["path_post_data"], state["post_type"], state["status_anon"], 0, 1, state["have_video"], state["video_number"]
             )
             await conn.close()
             await post.send("帖子提交审核成功，审核通过后帖子会发布到空间，请耐心等待，谢谢配合！")
             await push()
+            return None
     await post.finish("已取消操作...")
 
 

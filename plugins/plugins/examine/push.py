@@ -128,7 +128,7 @@ async def push():
         # 审核组无成员时结束处理
         return None
     
-    rows = await conn.fetch("SELECT id FROM audit WHERE is_examining = 0")
+    rows = await conn.fetch("SELECT id FROM audit WHERE is_examining = False")
     if rows:
         free_audit = [row[0] for row in rows]
     else:
@@ -190,7 +190,7 @@ async def post_data_update():
 
     # 帖子最大同时审核人数随审核组未审核时间动态变化
     for post in data_list:
-        if not post["auditor_number"]:
+        if post["auditor_number"]:
             examine_begin_time = datetime.datetime.strptime(post["examine_begin_time"], "%Y-%m-%d %H:%M:%S")
             time_now = datetime.datetime.now()
             time_difference = time_now - examine_begin_time

@@ -5,6 +5,8 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Message, PrivateMessageEvent
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
+from utils.permission import ADMIN
+from utils.database import database_audit_init
 
 
 admin_list = on_command(
@@ -55,9 +57,10 @@ async def _(event: PrivateMessageEvent, args: Message = CommandArg()):
     for i in admin_data:
         if str(id) == str(i):
             await admin_add.finish(f"id为 {str(id)} 的用户已在审核组管理员中")
-    admin_data.append(int(id))
+    admin_data.append(str(id))
     with open(admin_data_file, "w", encoding="utf-8") as f:
         admin_data = json.dump(admin_data, f)
+    await database_audit_init()
     await admin_add.finish("添加成功")
 
 
@@ -72,10 +75,12 @@ async def _(event: PrivateMessageEvent, args: Message = CommandArg()):
         admin_data.remove(int(id))
         with open(admin_data_file, "w", encoding="utf-8") as f:
             json.dump(admin_data, f)
+        await database_audit_init()
         await admin_del.finish("删除成功")
     if str(id) in admin_data:
         admin_data.remove(str(id))
         with open(admin_data_file, "w", encoding="utf-8") as f:
             json.dump(admin_data, f)
+        await database_audit_init()
         await admin_del.finish("删除成功")
     await admin_del.finish(f"id为 {str(id)} 的用户不在审核组管理员中")

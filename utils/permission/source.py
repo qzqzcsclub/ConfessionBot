@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 import ujson as json
-from nonebot.adapters import Bot, Event
+from nonebot.adapters import Event
 from nonebot.permission import Permission
 
 
@@ -43,17 +43,3 @@ AUDIT = Permission(audit_checker, admin_checker)
 
 # 审核组管理员权限
 ADMIN = Permission(admin_checker)
-
-async def user_checker(bot: Bot,event: Event):
-    '''
-    普通用户权限检查
-    '''
-    result_audit_checker: bool = await AUDIT(bot, event)
-    result_admin_checker: bool = await ADMIN(bot, event)
-    if not result_audit_checker and not result_admin_checker:
-        return True
-    else:
-        return False
-
-# 普通用户权限
-USER = Permission(user_checker)

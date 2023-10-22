@@ -10,7 +10,7 @@ import ujson as json
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
-from utils.database import database_connect
+from utils.database import database_connect, database_unpublished_post_init
 
 
 async def post():
@@ -18,6 +18,7 @@ async def post():
     检测并发送动态
     '''
     # 连接数据库
+    conn = await database_unpublished_post_init()
     conn = await database_connect()
 
     # 获取 unpublished_post 表中的数据到字典中

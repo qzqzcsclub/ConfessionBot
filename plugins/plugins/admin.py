@@ -61,9 +61,10 @@ async def _(event: PrivateMessageEvent, args: Message = CommandArg()):
     for i in audit_data:
         if str(id) == str(i):
             await audit_add.finish(f"id为 {str(id)} 的用户已在审核组中")
-    audit_data.append(int(id))
+    audit_data.append(str(id))
     with open(audit_data_file, "w", encoding="utf-8") as f:
         audit_data = json.dump(audit_data, f)
+    await database_audit_init()
     await audit_add.finish("添加成功")
 
 
@@ -78,10 +79,12 @@ async def _(event: PrivateMessageEvent, args: Message = CommandArg()):
         audit_data.remove(int(id))
         with open(audit_data_file, "w", encoding="utf-8") as f:
             json.dump(audit_data, f)
+        await database_audit_init()
         await audit_del.finish("删除成功")
     if str(id) in audit_data:
         audit_data.remove(str(id))
         with open(audit_data_file, "w", encoding="utf-8") as f:
             json.dump(audit_data, f)
+        await database_audit_init()
         await audit_del.finish("删除成功")
     await audit_del.finish(f"id为 {str(id)} 的用户不在审核组中")

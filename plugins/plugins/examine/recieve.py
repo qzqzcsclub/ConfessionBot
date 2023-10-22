@@ -10,6 +10,7 @@ from utils.database import (
 )
 from utils.permission import AUDIT
 from utils.config import Config
+from plugins.plugins.examine import push
 
 
 examine_pass = on_command(
@@ -38,15 +39,16 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     # 连接数据库
     conn = await database_connect()
 
-    audit_id = int(event.get_session_id())
+    audit_id = str(event.get_session_id())
 
     # 获取数据库信息
     row = await conn.fetchrow("SELECT is_examining, examining_post_id FROM audit WHERE id = $1", audit_id)
     is_examining = bool(row[0])
-    examining_post_id = str(row[1])
 
     if not is_examining:
         await examine_pass.finish("当前无待审核的帖子")
+    
+    examining_post_id = str(row[1])
     
     # 将数据库里对应的帖子信息存储到字典中
     row = await conn.fetchrow("SELECT * FROM unverified_post WHERE id=$1", examining_post_id)
@@ -61,7 +63,7 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     await conn.execute(
         """INSERT INTO approved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, status_post, have_video, video_number)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
-        examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["status_post"], post_data["have_video"], post_data["video_number"]
+        examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], False, post_data["have_video"], post_data["video_number"]
     )
     await conn.execute(
         """INSERT INTO unpublished_post (id, commit_time, have_video, video_number)
@@ -79,6 +81,7 @@ async def _(bot: Bot, event: PrivateMessageEvent):
         user_id=post_data["user_id"],
         message=f"帖子id: {examining_post_id} ,审核通过\n帖子将在 {str(max_delay_time)} 分钟内发送至墙"
     )
+    await push()
 
 
 @examine_nopass.handle()
@@ -89,7 +92,7 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     # 连接数据库
     conn = await database_connect()
 
-    audit_id = int(event.get_session_id())
+    audit_id = str(event.get_session_id())
     # 获取数据库信息
     row = await conn.fetchrow("SELECT is_examining, examining_post_id FROM audit WHERE id = $1", audit_id)
     is_examining = bool(row[0])
@@ -108,7 +111,7 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     # 数据库数据更新
     await conn.execute(
         """INSERT INTO disapproved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, have_video, video_number)
-        VALUES ($1, $1, $3, $4, $5, $6, $7, $8, $9)""",
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
         examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], post_data["have_video"], post_data["video_number"]
     )
     await conn.execute("DELETE FROM unverified_post WHERE id=$1", examining_post_id)
@@ -121,3 +124,4 @@ async def _(bot: Bot, event: PrivateMessageEvent):
         user_id=post_data["user_id"],
         message=f"帖子id: {examining_post_id} ,审核不通过"
     )
+    await push()
