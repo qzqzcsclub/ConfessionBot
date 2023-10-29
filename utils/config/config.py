@@ -148,12 +148,12 @@ class ConfigsManager:
         """
         module = module.upper()
         key = key.upper()
-        logger.debug(
+        logger.trace(
             f"尝试获取配置 MODULE: [ {module} ] | KEY: [ {key} ]"
         )
         key = key = key.upper()
         if module in self._data.keys() and (config := self._data[module].configs.get(key)):
-            logger.debug(
+            logger.trace(
                 f"获取配置 MODULE: [ {module} ] | KEY: [ {key} ] 成功"
             )
             return config
@@ -176,7 +176,7 @@ class ConfigsManager:
         """
         module = module.upper()
         key = key.upper()
-        logger.debug(
+        logger.trace(
             f"尝试获取配置 MODULE: [ {module} ] | KEY: [{key}]"
         )
         value = None
@@ -208,7 +208,7 @@ class ConfigsManager:
                     value = config.value or config.default_value
         if value is None:
             value = default
-        logger.debug(
+        logger.trace(
             f"获取配置 MODULE: [ {module} ] | KEY: [ {key} ] -> [ {value} ]"
         )
         return value
@@ -364,3 +364,4 @@ class ConfigsManager:
             logger.info(f"用户配置文件 {self._file}.yaml 不存在，开始自动生成")
             self.save_user_data()
             logger.info(f"用户配置文件 {self._file}.yaml 生成成功")
+            

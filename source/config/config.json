@@ -19,6 +19,12 @@
             "default_value": 120,
             "type": "int",
             "help": "帖子审核通过后等待未发送帖子数达到最大值的最大时长，单位为分钟"
+        },
+        "EXAMINE_ONES_OWN": {
+            "value": false,
+            "default_value": false,
+            "type": "bool",
+            "help": "审核员是否可以审核自己"
         }
     },
     "DATABASE":{

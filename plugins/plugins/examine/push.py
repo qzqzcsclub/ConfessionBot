@@ -24,7 +24,6 @@ async def push_handle(auditor, post_id):
 
     # 获取帖子数据
     row = await conn.fetchrow("SELECT user_id, path_pic_post, path_post_data, have_video FROM unverified_post WHERE id = $1", post_id)
-    user_id = int(row[0])
     path_pic_post = Path(row[1])
     path_post_data = Path(row[2])
     have_video = bool(row[3])
@@ -46,7 +45,7 @@ async def push_handle(auditor, post_id):
                 try:
                     video_file = post_video["file"]
                     await send_private_msg(
-                        user_id=user_id,
+                        user_id=auditor,
                         message=MessageSegment.video(video_file, timeout=100)
                     )
                     break
@@ -56,7 +55,7 @@ async def push_handle(auditor, post_id):
                         video_url = post_video["url"]
                         logger.error(f"发送视频失败,视频所属帖子ID: {post_id} ,视频地址: {str(video_file)} ,报错信息: {str(e)}")
                         await send_private_msg(
-                                user_id=user_id,
+                                user_id=auditor,
                                 message=f"发送视频失败,视频所属帖子ID: {post_id} \n视频链接: {video_url}\n如果持续出现该问题请联系机器人维护者"
                             )
 
@@ -66,7 +65,7 @@ async def push_handle(auditor, post_id):
     for i in range(3):
         try:
             await send_private_msg(
-                user_id=user_id,
+                user_id=auditor,
                 message=send_message
             )
             break
@@ -74,13 +73,13 @@ async def push_handle(auditor, post_id):
             if i == 2:
                 logger.error(f"帖子效果图发送失败,帖子推送失败,帖子ID: {post_id} ,报错信息: {str(e)}")
                 await send_private_msg(
-                    user_id=user_id,
+                    user_id=auditor,
                     message=f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,如果问题重复出现请联系机器人维护者"
                 )
                 # 如果 other-error_alert 配置项为 True 就推送此次报错至机器人维护者(superusers)
                 if Config.get_value("other", "error_alert"):
-                    for superuser in list(bot.config.superusers):
-                        await bot.send_private_msg(
+                    for superuser in list(get_driver().config.superusers):
+                        await send_private_msg(
                             user_id=int(superuser),
                             message=f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,报错信息: {str(e)}"
                         )
@@ -95,7 +94,7 @@ async def push_handle(auditor, post_id):
     )
     await conn.execute(
         "UPDATE unverified_post SET examine_begin_time = $1 WHERE id = $2",
-        str(datetime.datetime.now()), post_id
+        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), post_id
     )
     row = await conn.fetchrow("SELECT auditor_number FROM unverified_post WHERE id = $1", post_id)
     auditor_number = row[0] + 1
@@ -152,6 +151,8 @@ async def push():
     rows = await conn.fetch("SELECT * FROM unverified_post ORDER BY commit_time ASC")
     data_list = [dict(row) for row in  rows]
 
+    examine_ones_own = Config.get_value("confession", "examine_ones_own")
+
     # 帖子发布时间越早越优先处理
     for post in data_list:
         add_auditor_number = int(post["max_auditor_number"]) - int(post["auditor_number"])
@@ -162,9 +163,21 @@ async def push():
                 await conn.close()
                 # 审核组无空闲成员时结束处理
                 return None
-            auditor = free_audit.pop()
-            await push_handle(auditor, post["id"])
-        
+            if examine_ones_own:
+                auditor = free_audit.pop()
+                await push_handle(auditor, post["id"])
+            else:
+                # 审核员不能审核自己的帖子
+                if free_audit[-1] != post["user_id"]:
+                    auditor = free_audit.pop()
+                    await push_handle(auditor, post["id"])
+                else:
+                    if len(free_audit) == 1:
+                        break
+                    else:
+                        last_auditor = free_audit.pop()
+                        free_audit.insert(0, last_auditor)
+
 
 async def post_data_update():
     '''

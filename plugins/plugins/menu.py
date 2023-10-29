@@ -10,7 +10,6 @@ from utils.permission import ADMIN, AUDIT
 help = on_command(
     '帮助',
     aliases={"菜单", "功能", "help"},
-    block=True,
     priority=10
 )
 
@@ -23,11 +22,11 @@ other = on_command(
 # 功能响应体
 @help.handle()
 async def _(bot: Bot, event: PrivateMessageEvent):
-    is_admin = ADMIN(bot, event)
-    is_audit = AUDIT(bot, event)
-    is_superuser = SUPERUSER(bot, event)
+    is_admin = await ADMIN(bot, event)
+    is_audit = await AUDIT(bot, event)
+    is_superuser = await SUPERUSER(bot, event)
     data = f"""欢迎使用{list(bot.config.nickname)[0]}
-    
+
 用户功能说明:
 1. 发帖命令:
    - 发帖 <类型> <匿名>

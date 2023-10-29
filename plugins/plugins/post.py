@@ -21,7 +21,6 @@ from utils.database import database_connect, database_unverified_post_init, data
 
 post = on_command(
     "发帖",
-    block=True,
     priority=10
 )
 

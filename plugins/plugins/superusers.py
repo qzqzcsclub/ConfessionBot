@@ -12,7 +12,6 @@ from utils.database import database_audit_init
 admin_list = on_command(
     '审核组管理员列表',
     permission=SUPERUSER,
-    block=True,
     priority=10
 )
 
