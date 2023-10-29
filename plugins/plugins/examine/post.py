@@ -1,5 +1,5 @@
 from nonebot import logger, require, get_bot
-from nonebot_adapters_qzone import Message, MessageSegment
+from nonebot.adapters.qzone import Message, MessageSegment
 
 require("nonebot_plugin_apscheduler")
 
