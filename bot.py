@@ -5,7 +5,7 @@ import nonebot.adapters
 
 
 nonebot.adapters.__path__.append(
-    str((Path(__file__) / "adapters").resolve())
+    str((Path(__file__).parent / "adapters").resolve())
 )
 
 
