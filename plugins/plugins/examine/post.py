@@ -3,14 +3,23 @@ from nonebot_adapters_qzone import Message, MessageSegment
 
 require("nonebot_plugin_apscheduler")
 
+import base64
 import datetime
+import ujson as json
 from pathlib import Path
 
-import ujson as json
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
 from utils.database import database_connect, database_unpublished_post_init
+
+
+
+async def to_uri(path):
+    with open(path, "rb") as img:
+        binary = img.read()
+    code = base64.b64encode(binary).decode("utf-8")
+    return f"data:image/png;base64,{code}"
 
 
 async def post():
@@ -64,12 +73,7 @@ async def post():
                 path_post_data = Path(path_post_data)
                 path_pic_post = Path(path_pic_post).as_uri()
                 # 消息添加帖子效果图
-                msg_data += MessageSegment(
-                    type="image",
-                    data={
-                        "file": str(path_pic_post)
-                    }    
-                )
+                msg_data += MessageSegment.image(await to_uri(path_pic_post))
                 # 消息添加视频
                 if post["have_video"]:
                     with open(path_post_data, "w", encoding="utf-8") as f:
@@ -77,10 +81,7 @@ async def post():
                     for c in post_data:
                         path_video = Path(c["data"]["file"]).as_uri()
                         if c["type"] == "video":
-                            msg_data += MessageSegment(
-                                type="video",
-                                file=str(path_video)
-                            )
+                            msg_data += MessageSegment.video(await to_uri(path_video))
 
             # 动态发送尝试三次
             for i in range(3):
