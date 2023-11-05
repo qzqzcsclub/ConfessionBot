@@ -1,6 +1,5 @@
 import asyncio
 import os
-import platform
 import shutil
 import subprocess
 import tarfile
@@ -66,57 +65,6 @@ async def dep_file_handle():
         shutil.copy2(dep_file.absolute(), dep_org_source_file.absolute())
         logger.warning(f"检测到机器人原始依赖文件资源 {dep_org_source_file} 不存在，自动从用户依赖文件 {dep_file} 生成")
     shutil.copy2(dep_file.absolute(), dep_user_source_file.absolute())
-
-
-@driver.on_bot_connect
-async def restart_handle(bot: Bot):
-    '''
-    机器人连接时自动生成重启文件
-    '''
-    if str(platform.system()).lower() == "windows":
-        restart = Path() / "restart.bat"
-        if not restart.exists():
-            port = str(bot.config.port)
-            script = f'''
-@echo off
-set PORT={port}
-
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%PORT%"') do (
-taskkill /PID %%a /F
-goto :RunPoetry
-)
-
-:RunPoetry
-call poetry run nb run
-'''
-            with open(restart, "w", encoding="utf-8") as f:
-                f.write(script)
-            logger.info("已自动生成 restart.bat(重启) 文件，请检查脚本是否与本地指令符合")
-    else:
-        restart = Path() / "restart.sh"
-        if not restart.exists():
-            port = str(bot.config.port)
-            script = f'''
-pid=$(netstat -tunlp | grep {port} | awk '{{print $7}}')
-pid=${{pid%/*}}
-kill -9 $pid
-sleep 3
-poetry run nb run
-'''
-            with open(restart, "w", encoding="utf-8") as f:
-                f.write(script)
-            os.system("chmod +x ./restart.sh")
-            logger.info("已自动生成 restart.sh(重启) 文件，请检查脚本是否与本地指令符合")
-    is_restart_file = Path() / "is_restart"
-    if is_restart_file.exists():
-        with open(is_restart_file, "r", encoding="utf-8") as f:
-            user_id=f.read()
-        if user_id:
-            await bot.send_private_msg(
-                user_id=int(user_id),
-                message="机器人重启完毕",
-            )
-        is_restart_file.unlink()
 
 
 async def check_update(bot: Bot) -> Tuple[int, str]:

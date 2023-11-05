@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import ujson as json
-from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Message, PrivateMessageEvent
+from nonebot import on_command, get_bot
+from nonebot.adapters.onebot.v11 import Message, MessageSegment, PrivateMessageEvent
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
-from utils.permission import ADMIN
 from utils.database import database_audit_init
+from utils.config import Config
 
 
 admin_list = on_command(
@@ -19,7 +19,6 @@ admin_list = on_command(
 admin_add = on_command(
     '添加审核组管理员',
     permission=SUPERUSER,
-    block=True,
     priority=10
 )
 
@@ -27,7 +26,42 @@ admin_add = on_command(
 admin_del = on_command(
     '删除审核组管理员',
     permission=SUPERUSER,
-    block=True,
+    priority=10
+)
+
+
+qzone_login = on_command(
+    '空间登录',
+    aliases={"登录", "login"},
+    permission=SUPERUSER,
+    priority=10
+)
+
+
+qzone_logout = on_command(
+    '空间登出',
+    aliases={"登出", "logout"},
+    permission=SUPERUSER,
+    priority=10
+)
+
+
+qzone_query = on_command(
+    '空间状态查询',
+    aliases={"状态查询", "query"},
+    permission=SUPERUSER,
+    priority=10
+)
+
+qzone_auto_login_open = on_command(
+    '开启空间自动登录',
+    permission=SUPERUSER,
+    priority=10
+)
+
+qzone_auto_login_close = on_command(
+    '关闭空间自动登录',
+    permission=SUPERUSER,
     priority=10
 )
 
@@ -83,3 +117,58 @@ async def _(event: PrivateMessageEvent, args: Message = CommandArg()):
         await database_audit_init()
         await admin_del.finish("删除成功")
     await admin_del.finish(f"id为 {str(id)} 的用户不在审核组管理员中")
+
+
+@qzone_login.handle()
+async def _(event: PrivateMessageEvent):
+    bot = get_bot("qzone_bot")
+    qq_number = await bot.query()
+    if qq_number:
+        await qzone_login.finish(f"空间已登录，账号ID： {str(qq_number)}")
+    else:
+        await bot.login()
+        qrcode = Path() / "cache" / "qrcode.png"
+        msg = MessageSegment.image(file = qrcode) + MessageSegment.text("请扫码登录QQ空间，扫码后可通过“空间状态查询”命令查询登录状态")
+        await qzone_login.finish(msg)
+
+
+@qzone_logout.handle()
+async def _(event: PrivateMessageEvent):
+    bot = get_bot("qzone_bot")
+    qq_number = await bot.query()
+    if qq_number:
+        await bot.logout()
+        await qzone_logout.finish(f"空间已登出，账号ID： {str(qq_number)}")
+    else:
+        await qzone_logout.finish(f"空间未登录")
+
+
+@qzone_query.handle()
+async def _(event: PrivateMessageEvent):
+    bot = get_bot("qzone_bot")
+    qq_number = await bot.query()
+    if qq_number:
+        await qzone_query.finish(f"空间已登录，账号ID： {str(qq_number)}")
+    else:
+        await qzone_query.finish(f"空间未登录")
+
+
+@qzone_auto_login_open.handle()
+async def _(event: PrivateMessageEvent):
+    auto_login_qzone = Config.get_value("bot_info", "auto_login_qzone")
+    if auto_login_qzone:
+        await qzone_auto_login_open.finish("空间自动登录已开启，无需再次开启")
+    else:
+        Config.set_config("bot_info", "auto_login_qzone", True)
+        await qzone_auto_login_open.finish("空间自动登录开启成功")
+
+
+@qzone_auto_login_close.handle()
+async def _(event: PrivateMessageEvent):
+    auto_login_qzone = Config.get_value("bot_info", "auto_login_qzone")
+    if not auto_login_qzone:
+        await qzone_auto_login_close.finish("空间自动登录已关闭，无需再次关闭")
+    else:
+        Config.set_config("bot_info", "auto_login_qzone", False)
+        await qzone_auto_login_close.finish("空间自动登录关闭成功")
+        

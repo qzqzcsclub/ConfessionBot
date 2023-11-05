@@ -16,7 +16,11 @@ async def database_connect():
     password = Config.get_value("database", "password")
     host = Config.get_value("database", "host")
     port = Config.get_value("database", "port")
-    conn = await asyncpg.connect(database=database, user=user, password=password, host=host, port=port)
+    try:
+        conn = await asyncpg.connect(database=database, user=user, password=password, host=host, port=port)
+    except Exception as e:
+        logger.error("数据库连接失败，大部分功能不可用，请按照报错信息排查错误。错误： ",str(e))
+        raise
     logger.trace("连接数据库成功")
     return conn
 
@@ -125,7 +129,10 @@ async def database_approved_post_init():
             status_anon INTEGER,
             status_post BOOL,
             have_video BOOL,
-            video_number INTEGER
+            video_number INTEGER,
+            qzone_post_id TEXT,
+            qzone_pic_id TEXT,
+            qzone_videos_id TEXT
             )"""
     )
     await conn.close()

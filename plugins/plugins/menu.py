@@ -50,7 +50,7 @@ async def _(bot: Bot, event: PrivateMessageEvent):
         data += "\n\n审核组管理员功能说明:\n命令:\n1. 审核组列表\n2. 删除/添加审核员 <用户ID>"
     
     if is_superuser:
-        data += "\n\n机器人维护者功能说明:\n命令:\n1. 审核组管理员列表\n2. 删除/添加审核组管理员 <用户ID>"
+        data += "\n\n机器人维护者功能说明:\n命令:\n1. 空间登录\n2. 空间登出\n3. 开启/关闭自动空间登录\n4. 空间状态查询\n5. 审核组管理员列表\n6. 删除/添加审核组管理员 <用户ID>"
     
     data += "\n\n防封编码:"
     data += str(random.randint(10000, 99999))

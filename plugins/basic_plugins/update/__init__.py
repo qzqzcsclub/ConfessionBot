@@ -1,18 +1,14 @@
 from nonebot import get_bot, logger, on_command, require
 from nonebot.adapters.onebot.v11 import Bot, Event
-from nonebot.params import ArgStr
 from nonebot.permission import SUPERUSER
 from nonebot.rule import to_me
 
 require("nonebot_plugin_apscheduler")
 
-import platform
-import subprocess
-from pathlib import Path
-
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
+from plugins.basic_plugins.restart import bot_restart
 
 from .source import check_update
 
@@ -22,14 +18,6 @@ update_check = on_command(
     rule=to_me(),
     priority=1, 
     block=True
-)
-
-restart = on_command(
-    "重启",
-    permission=SUPERUSER,
-    rule=to_me(),
-    priority=1,
-    block=True,
 )
 
 
@@ -44,7 +32,7 @@ async def _(bot: Bot, event: Event):
         if status_update == 200:
             if Config.get_value("bot_update", "auto_restart"):
                 logger.info("更新完毕，开始重启机器人")
-                await restart.send("更新完毕，开始自动重启机器人")
+                await update_check.send("更新完毕，开始自动重启机器人")
                 await bot_restart(event)
             else:
                 logger.info("更新完毕，等待重启")
@@ -55,15 +43,6 @@ async def _(bot: Bot, event: Event):
         elif status_update:
             logger.error(f"检查并更新机器人错误，错误信息： {error_info}")
             await update_check.finish(f"检查并更新机器人错误\n错误信息：\n{error_info}")
-
-
-@restart.got("flag", prompt=f"确定是否重启机器人？确定请回复[是|好|确定]（重启失败咱们将失去联系，请谨慎！）")
-async def _(event: Event, flag: str = ArgStr("flag")):
-    if flag.lower() in ["true", "是", "好", "确定", "确定是"]:
-        await restart.send("开始重启机器人..请稍等...")
-        await bot_restart(event)
-    else:
-        await restart.send("已取消操作...")
 
 
 @scheduler.scheduled_job(
@@ -110,13 +89,3 @@ async def _():
                         user_id=int(superuser),
                         message=f"检查并更新机器人错误\n错误信息：\n{error_info}"
                     )
-
-
-async def bot_restart(event=None):
-    with open("is_restart", "w", encoding="utf-8") as f:
-        if event:
-            f.write(event.get_session_id())
-    if str(platform.system()).lower() == "windows":
-        subprocess.run(["restart.bat"], cwd=Path())
-    else:
-        subprocess.run(["sudo", "./restart.sh"], cwd=Path())

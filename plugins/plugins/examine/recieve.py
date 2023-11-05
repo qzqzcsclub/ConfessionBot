@@ -61,9 +61,9 @@ async def _(bot: Bot, event: PrivateMessageEvent):
 
     # 帖子数据处理
     await conn.execute(
-        """INSERT INTO approved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, status_post, have_video, video_number)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
-        examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], False, post_data["have_video"], post_data["video_number"]
+        """INSERT INTO approved_post (id, commit_time, user_id, path_pic_post, path_post_data, post_type, status_anon, status_post, have_video, video_number, qzone_post_id, qzone_pic_id, qzone_videos_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)""",
+        examining_post_id, post_data["commit_time"], post_data["user_id"], post_data["path_pic_post"], post_data["path_post_data"], post_data["post_type"], post_data["status_anon"], False, post_data["have_video"], post_data["video_number"], None, None, None
     )
     await conn.execute(
         """INSERT INTO unpublished_post (id, commit_time, have_video, video_number)
