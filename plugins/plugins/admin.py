@@ -10,21 +10,24 @@ import ujson as json
 audit_list = on_command(
     '审核组列表',
     permission=ADMIN,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
 audit_add = on_command(
     '添加审核员',
     permission=ADMIN,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
 audit_del = on_command(
     '删除审核员',
     permission=ADMIN,
-    priority=10
+    priority=10,
+    block=True
 )
 
 

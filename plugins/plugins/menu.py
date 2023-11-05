@@ -10,7 +10,8 @@ from utils.permission import ADMIN, AUDIT
 help = on_command(
     '帮助',
     aliases={"菜单", "功能", "help"},
-    priority=10
+    priority=10,
+    block=True
 )
 
 other = on_command(

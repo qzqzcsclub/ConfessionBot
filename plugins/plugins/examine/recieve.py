@@ -18,7 +18,8 @@ examine_pass = on_command(
     "通过",
     aliases={"是", "1"},
     permission=AUDIT,
-    priority=11
+    priority=11,
+    block=True
 )
 
 
@@ -26,7 +27,8 @@ examine_nopass = on_command(
     "不通过",
     aliases={"否", "2"},
     permission=AUDIT,
-    priority=11
+    priority=11,
+    block=True
 )
 
 

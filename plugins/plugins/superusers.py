@@ -2,7 +2,7 @@ from pathlib import Path
 
 import ujson as json
 from nonebot import on_command, get_bot
-from nonebot.adapters.onebot.v11 import Message, MessageSegment, PrivateMessageEvent
+from nonebot.adapters.onebot.v11 import Message, PrivateMessageEvent
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
 from utils.database import database_audit_init
@@ -11,21 +11,24 @@ from utils.database import database_audit_init
 admin_list = on_command(
     '审核组管理员列表',
     permission=SUPERUSER,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
 admin_add = on_command(
     '添加审核组管理员',
     permission=SUPERUSER,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
 admin_del = on_command(
     '删除审核组管理员',
     permission=SUPERUSER,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
@@ -33,7 +36,8 @@ qzone_login = on_command(
     '空间登录',
     aliases={"登录", "login"},
     permission=SUPERUSER,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
@@ -41,7 +45,8 @@ qzone_logout = on_command(
     '空间登出',
     aliases={"登出", "logout"},
     permission=SUPERUSER,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
@@ -49,7 +54,8 @@ qzone_query = on_command(
     '空间状态查询',
     aliases={"状态查询", "query"},
     permission=SUPERUSER,
-    priority=10
+    priority=10,
+    block=True
 )
 
 
