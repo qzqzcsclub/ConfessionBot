@@ -53,18 +53,6 @@ qzone_query = on_command(
     priority=10
 )
 
-qzone_auto_login_open = on_command(
-    '开启空间自动登录',
-    permission=SUPERUSER,
-    priority=10
-)
-
-qzone_auto_login_close = on_command(
-    '关闭空间自动登录',
-    permission=SUPERUSER,
-    priority=10
-)
-
 
 @admin_list.handle()
 async def _(event: PrivateMessageEvent):
@@ -151,24 +139,3 @@ async def _(event: PrivateMessageEvent):
         await qzone_query.finish(f"空间已登录，账号ID： {str(qq_number)}")
     else:
         await qzone_query.finish(f"空间未登录")
-
-
-@qzone_auto_login_open.handle()
-async def _(event: PrivateMessageEvent):
-    auto_login_qzone = Config.get_value("bot_info", "auto_login_qzone")
-    if auto_login_qzone:
-        await qzone_auto_login_open.finish("空间自动登录已开启，无需再次开启")
-    else:
-        Config.set_config("bot_info", "auto_login_qzone", True)
-        await qzone_auto_login_open.finish("空间自动登录开启成功")
-
-
-@qzone_auto_login_close.handle()
-async def _(event: PrivateMessageEvent):
-    auto_login_qzone = Config.get_value("bot_info", "auto_login_qzone")
-    if not auto_login_qzone:
-        await qzone_auto_login_close.finish("空间自动登录已关闭，无需再次关闭")
-    else:
-        Config.set_config("bot_info", "auto_login_qzone", False)
-        await qzone_auto_login_close.finish("空间自动登录关闭成功")
-        

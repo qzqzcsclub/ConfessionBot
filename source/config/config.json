@@ -5,12 +5,6 @@
             "default_value": [],
             "type": "list",
             "help": "发布和审核帖子的机器人QQ账号(可填写多个)"
-        },
-        "AUTO_LOGIN_QZONE": {
-            "value": true,
-            "default_value": true,
-            "type": "bool",
-            "help": "机器人启动时是否自动尝试登录空间"
         }
     },
     "CONFESSION": {
