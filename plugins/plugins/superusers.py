@@ -6,7 +6,6 @@ from nonebot.adapters.onebot.v11 import Message, MessageSegment, PrivateMessageE
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
 from utils.database import database_audit_init
-from utils.config import Config
 
 
 admin_list = on_command(
@@ -114,10 +113,8 @@ async def _(event: PrivateMessageEvent):
     if qq_number:
         await qzone_login.finish(f"空间已登录，账号ID： {str(qq_number)}")
     else:
+        await qzone_login.send("开始尝试空间登录，详见机器人控制台")
         await bot.login()
-        qrcode = Path() / "cache" / "qrcode.png"
-        msg = MessageSegment.image(file = qrcode) + MessageSegment.text("请扫码登录QQ空间，扫码后可通过“空间状态查询”命令查询登录状态")
-        await qzone_login.finish(msg)
 
 
 @qzone_logout.handle()
