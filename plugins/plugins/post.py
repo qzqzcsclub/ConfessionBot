@@ -78,7 +78,7 @@ async def _(bot: Bot, event: PrivateMessageEvent, state: T_State, received_event
             if post_msg[0].data["text"] == "":
                 post_msg = post_msg[1:]
         state["post_msg"] = post_msg
-        await post.reject()
+        await post.reject_receive("msg_receive_handle")
     elif state["post_type"] == 1:
         if "text" in msg[0].data:
             if msg[0].data["text"] == "取消":
