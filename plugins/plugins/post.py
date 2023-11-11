@@ -58,8 +58,8 @@ async def _(event: PrivateMessageEvent, state: T_State, args: Message = CommandA
     await post.send("请发送帖子消息,结束时发送“结束”，取消发送“取消”")
 
 
-@post.receive("handle")
-async def _(bot: Bot, event: PrivateMessageEvent, state: T_State, received_event: Event = Received("handle")):
+@post.receive("msg_receive_handle")
+async def _(bot: Bot, event: PrivateMessageEvent, state: T_State, received_event: Event = Received("msg_receive_handle")):
     '''
     帖子消息数据响应器，接收数据后处理数据
     '''
