@@ -177,6 +177,8 @@ async def push():
                     else:
                         last_auditor = free_audit.pop()
                         free_audit.insert(0, last_auditor)
+                        auditor = free_audit.pop()
+                        await push_handle(auditor, post["id"])
 
 
 async def post_data_update():
