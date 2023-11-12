@@ -127,7 +127,7 @@ async def post():
                 msg_data += MessageSegment.image(await image_to_uri(path_pic_post, image_file_type))
             # 消息添加视频
             if post["have_video"]:
-                with open(path_post_data, "w", encoding="utf-8") as f:
+                with open(path_post_data, "r", encoding="utf-8") as f:
                     post_data = json.loads(f.read())
                 for c in post_data:
                     path_video = Path(c["data"]["file"])
@@ -149,7 +149,7 @@ async def post():
         num = 0
         for post in data_list[0:post_number]:
             qzone_pic_id = qzone_source_ids[0]
-            if posts_occupancy[num]:
+            if posts_occupancy[num] != 1:
                 qzone_source_id = str(qzone_source_ids[1:posts_occupancy[num]])
             else:
                 qzone_source_id = None
@@ -165,5 +165,5 @@ async def post():
 
 # 定时检测并发送动态
 scheduler.add_job(
-    post, "interval", minutes=10, id="active_post"
+    post, "interval", minutes=1, id="active_post"
 )
