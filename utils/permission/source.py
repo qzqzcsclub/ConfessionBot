@@ -16,7 +16,7 @@ async def audit_checker(event: Event):
         with open(audit_data_file, 'w', encoding="utf-8") as f:
             f.write("[]")
     with open(audit_data_file, "r", encoding="utf-8") as f:
-        audit_data = json.loads(f.read())
+        audit_data = json.load(f)
     for i in audit_data:
         if str(event.get_session_id()) == str(i):
             return True
@@ -32,7 +32,7 @@ async def admin_checker(event: Event):
         with open(admin_data_file, 'w', encoding="utf-8") as f:
             f.write("[]")
     with open(admin_data_file, "r", encoding="utf-8") as f:
-        admin_data = json.loads(f.read())
+        admin_data = json.load(f)
     for i in admin_data:
         if str(event.get_session_id()) == str(i):
             return True

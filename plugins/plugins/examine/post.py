@@ -1,8 +1,9 @@
-from nonebot import logger, require, get_bot
+from nonebot import logger, require, get_bot, get_driver
 from nonebot.adapters.qzone import MessageSegment
 
 require("nonebot_plugin_apscheduler")
 
+import os
 import base64
 import datetime
 import ujson as json
@@ -11,6 +12,7 @@ from pathlib import Path
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
+from utils.api_qq import send_private_msg
 from utils.database import database_connect, database_unpublished_post_init
 
 
@@ -74,6 +76,41 @@ async def post():
             # 如果没到达最长等待时间就结束处理
             if minutes_difference < max_delay_time:
                 return None
+            
+        bot = get_bot("qzone_bot")
+        if not await bot.query():
+            logger.warning("空间未登录无法发送帖子")
+            # 如果 other-error_alert 配置项为 True 就推送空间未登录的问题至机器人维护者(superusers)
+            # 为了防止频繁打扰机器人维护者(superusers)，该问题一天仅提醒一次
+            if Config.get_value("other", "error_alert"):
+                # 通过读写缓存文件中的信息实现问题一天仅提醒一次
+                cache_file = Path() / "cache" / "info.json" # 缓存文件路径
+                cache_file.parent.mkdir(exist_ok=True, parents=True)
+                if not os.path.exists(cache_file):
+                    with open(cache_file, 'w', encoding="utf-8") as f:
+                        f.write("{}")
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    cache = json.load(f)
+                if "cache_update_time" not in cache:
+                    cache["cache_update_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                if "NotLoggedIn_alert" not in cache:
+                    cache["NotLoggedIn_alert"] = False
+                cache_day = datetime.datetime.strptime(cache["cache_update_time"], "%Y-%m-%d %H:%M:%S").day
+                today = datetime.datetime.now().day
+                if cache_day != today:
+                    cache["NotLoggedIn_alert"] = False
+                if not cache["NotLoggedIn_alert"]:
+                    for superuser in list(get_driver().config.superusers):
+                        await send_private_msg(
+                            user_id=int(superuser),
+                            message=f"空间未登录无法发送帖子\n(该问题一天仅提醒一次)"
+                        )
+                cache["cache_update_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cache["NotLoggedIn_alert"] = True
+                with open(cache_file, "w", encoding="utf-8") as f:
+                    cache = json.dump(cache, f)
+                return None
+
         # 处理帖子数据并发送动态
         msg_data = False
         for post in data_list[0:post_number]:
@@ -101,7 +138,6 @@ async def post():
         # 动态发送尝试三次
         for i in range(3):
             try:
-                bot = get_bot("qzone_bot")
                 qzone_post_id, qzone_source_ids= await bot.publish(msg_data)
                 break
             except Exception as e:
