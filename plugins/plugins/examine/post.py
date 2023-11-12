@@ -150,7 +150,7 @@ async def post():
         for post in data_list[0:post_number]:
             qzone_pic_id = qzone_source_ids[0]
             if posts_occupancy[num]:
-                qzone_source_id = str(qzone_source_ids[1,posts_occupancy[num]])
+                qzone_source_id = str(qzone_source_ids[1:posts_occupancy[num]])
             else:
                 qzone_source_id = None
             await conn.execute("DELETE FROM unpublished_post WHERE id=$1", post["id"])
