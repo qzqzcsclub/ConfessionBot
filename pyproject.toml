@@ -1,0 +1,39 @@
+[project]
+name = "ConfessionBot"
+version = "0.1.0"
+description = "ConfessionBot"
+readme = "README.md"
+requires-python = ">=3.10, <4.0"
+
+[tool.nonebot]
+adapters = []
+plugins = ["nonebot_plugin_htmlrender"]
+plugin_dirs = ["plugins/basic_plugins", "plugins/plugins", "plugins/extra_plugins"]
+builtin_plugins = []
+
+[tool.poetry]
+name = "confessionbot"
+version = "0.1.0"
+description = "ConfessionBot"
+authors = ["qzcsclub <qzcsclub@outlook.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+nb-cli = "^1.2.2"
+nonebot-adapter-onebot = "^2.2.4"
+nonebot-plugin-apscheduler = "^0.3.0"
+ujson = "^5.8.0"
+httpx = "^0.24.1"
+nonebot-plugin-htmlrender = "^0.2.1"
+pillow = "^10.0.0"
+ruamel-yaml = "^0.17.33"
+filetype = "^1.2.0"
+toml = "^0.10.2"
+asyncpg = "^0.28.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
