@@ -1,17 +1,18 @@
-from nonebot import logger, require, get_driver
-from nonebot.adapters.onebot.v11 import Message, MessageSegment
-
-require("nonebot_plugin_apscheduler")
-
 import datetime
 from pathlib import Path
 
 import ujson as json
+from nonebot import logger, require, get_driver
+from nonebot.adapters.onebot.v11 import MessageSegment
+
+require("nonebot_plugin_saa")
+from nonebot_plugin_saa import Text, Image
+
+require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
-from utils.api_qq import send_private_msg
-
+from utils.api import send_private_msg, send_video
 from utils.database import database_connect, database_audit_init, database_unverified_post_init
 
 
@@ -44,9 +45,9 @@ async def push_handle(auditor, post_id):
             for i in range(3):
                 try:
                     video_file = post_video["file"]
-                    await send_private_msg(
+                    await send_video(
                         user_id=auditor,
-                        message=MessageSegment.video(video_file, timeout=100)
+                        file=video_file
                     )
                     break
                 except Exception as e:
@@ -56,11 +57,11 @@ async def push_handle(auditor, post_id):
                         logger.error(f"发送视频失败,视频所属帖子ID: {post_id} ,视频地址: {str(video_file)} ,报错信息: {str(e)}")
                         await send_private_msg(
                                 user_id=auditor,
-                                message=f"发送视频失败,视频所属帖子ID: {post_id} \n视频链接: {video_url}\n如果持续出现该问题请联系机器人维护者"
+                                message=Text(f"发送视频失败,视频所属帖子ID: {post_id} \n视频链接: {video_url}\n如果持续出现该问题请联系机器人维护者")
                             )
 
     # 发帖子效果图    
-    send_message = MessageSegment.image(path_pic_post, timeout=20) + Message(f"帖子ID: {post_id} ,审核通过请回复 通过/是/1 ,不通过请回复 不通过/否/2")
+    send_message = Image(path_pic_post) + Text(f"帖子ID: {post_id} ,审核通过请回复 通过/是/1 ,不通过请回复 不通过/否/2")
     # 尝试发送文字和帖子效果图3次，失败就结束此次推送
     for i in range(3):
         try:
@@ -74,14 +75,14 @@ async def push_handle(auditor, post_id):
                 logger.error(f"帖子效果图发送失败,帖子推送失败,帖子ID: {post_id} ,报错信息: {str(e)}")
                 await send_private_msg(
                     user_id=auditor,
-                    message=f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,如果问题重复出现请联系机器人维护者"
+                    message=Text(f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,如果问题重复出现请联系机器人维护者")
                 )
                 # 如果 other-error_alert 配置项为 True 就推送此次报错至机器人维护者(superusers)
                 if Config.get_value("other", "error_alert"):
                     for superuser in list(get_driver().config.superusers):
                         await send_private_msg(
                             user_id=int(superuser),
-                            message=f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,报错信息: {str(e)}"
+                            message=Text(f"帖子效果图发送失败,帖子推送失败。\n帖子ID: {post_id} ,报错信息: {str(e)}")
                         )
                 return None
     
@@ -122,7 +123,7 @@ async def push():
         for superuser in list(get_driver().config.superusers):
             await send_private_msg(
                     user_id=int(superuser),
-                    message="审核组无成员,无法完成帖子审核"
+                    message=Text("审核组无成员,无法完成帖子审核")
                 )
         # 审核组无成员时结束处理
         return None

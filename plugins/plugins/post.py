@@ -16,6 +16,7 @@ from nonebot_plugin_htmlrender import md_to_pic
 from PIL import Image
 
 from plugins.plugins.examine import push
+from utils.config import Config
 from utils.database import database_connect, database_unverified_post_init, database_info_init
 
 
@@ -65,7 +66,12 @@ async def _(bot: Bot, event: PrivateMessageEvent, state: T_State, received_event
     '''
     msg = received_event.get_message()
     post_msg = state.get("post_msg", "")
-    if state["post_type"] == 0:
+    platform_type = Config.get_value("bot_info", "platform_type")
+    if state["post_type"] == 0: # 对话
+        if platform_type == "onebotv12":
+            if "video" in msg[0].data:
+                await post.send("不支持视频，请继续发送...\n输入“取消”可取消发帖")
+                await post.reject_receive("msg_receive_handle")
         if "text" in msg[0].data:
             if msg[0].data["text"] == "结束":
                 await post.send("开始处理数据...")
@@ -79,10 +85,13 @@ async def _(bot: Bot, event: PrivateMessageEvent, state: T_State, received_event
                 post_msg = post_msg[1:]
         state["post_msg"] = post_msg
         await post.reject_receive("msg_receive_handle")
-    elif state["post_type"] == 1:
+    elif state["post_type"] == 1: # 文章
         if "text" in msg[0].data:
             if msg[0].data["text"] == "取消":
                 await post.finish("已取消操作...")
+        if platform_type == "onebotv12":
+            if "video" in msg[0].data:
+                await post.finish("不支持视频，已取消操作...")
         post_msg = msg
         state["post_msg"] = post_msg
         await post.send("开始处理数据...")

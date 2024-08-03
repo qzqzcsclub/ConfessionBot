@@ -10,7 +10,7 @@ from utils.database import (
 )
 from utils.permission import AUDIT
 from utils.config import Config
-from utils.api_qq import send_private_msg
+from utils.api import send_private_msg
 from plugins.plugins.examine import push
 
 

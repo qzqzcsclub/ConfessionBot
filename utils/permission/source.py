@@ -1,7 +1,7 @@
 import os
+import ujson as json
 from pathlib import Path
 
-import ujson as json
 from nonebot.adapters import Event
 from nonebot.permission import Permission
 

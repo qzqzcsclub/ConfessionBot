@@ -3,16 +3,20 @@ import os
 import shutil
 import subprocess
 import tarfile
-from pathlib import Path
-from typing import Tuple
-
 import httpx
 import toml
 import ujson as json
-from nonebot import get_driver, logger
+from pathlib import Path
+from typing import Tuple
+
+from nonebot import get_driver, logger, require
 from nonebot.adapters import Bot
 
+require("nonebot_plugin_saa")
+from nonebot_plugin_saa import Text
+
 from utils.config import Config
+from utils.api import send_private_msg
 
 driver = get_driver()
 
@@ -100,15 +104,15 @@ async def check_update(bot: Bot) -> Tuple[int, str]:
                 raise NoVersionMatch(f"找不到与远程仓库版本相匹配的机器人版本信息文件中的版本，无法检测更新，版本信息文件应该位于{_version_file}")
             logger.info(f"检测到机器人需要更新，当前版本：{_version}，下一版本：{releases_version}，最新版本：{latest_version}")
             for superuser in list(bot.config.superusers):
-                await bot.send_private_msg(
+                await send_private_msg(
                     user_id=int(superuser),
-                    message=f"检测到机器人需要更新，当前版本：{_version}，下一版本：{releases_version}，最新版本：{latest_version}\n" f"开始更新",
+                    message=Text(f"检测到机器人需要更新，当前版本：{_version}，下一版本：{releases_version}，最新版本：{latest_version}\n" f"开始更新"),
                 )
             logger.debug(f"开始下载机器人 {releases_version} 版本文件")
-            async with httpx.AsyncClient(proxies=proxies) as client:
+            async with httpx.AsyncClient(proxies=proxies) as client: # type: ignore
                 resp = await client.get(tar_gz_url)
                 tar_gz_url = resp.headers.get("Location")
-            async with httpx.AsyncClient(proxies=proxies) as client:
+            async with httpx.AsyncClient(proxies=proxies) as client: # type: ignore
                 resp = await client.get(tar_gz_url)
                 status_code = resp.status_code
                 file_data = resp.content
@@ -135,9 +139,9 @@ async def check_update(bot: Bot) -> Tuple[int, str]:
                 if update_desc:
                     msg += f"\n更新说明：\n{update_desc}"
                 for superuser in list(bot.config.superusers):
-                    await bot.send_private_msg(
+                    await send_private_msg(
                         user_id=int(superuser),
-                        message=msg
+                        message=Text(msg)
                     )
                 return 200, ""
             else:
@@ -354,14 +358,14 @@ def _update_handle() -> str:
         return ""
 
 
-async def get_version_data() -> tuple[bool, any]:
+async def get_version_data() -> tuple[bool, any]: # type: ignore
     '''
     获取版本信息
     '''
     for i in range(3):
         try:
-            async with httpx.AsyncClient(timeout=30, proxies=proxies) as client:
-                resp = await client.get(release_url)
+            async with httpx.AsyncClient(timeout=30, proxies=proxies) as client: # type: ignore
+                resp = await client.get(release_url) # type: ignore
                 if resp.status_code == 200:
                     return True, json.loads(resp.text)
         except httpx.ReadTimeout:

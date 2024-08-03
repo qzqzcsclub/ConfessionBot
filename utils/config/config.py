@@ -1,13 +1,13 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
-
-import builtins
-from nonebot import logger
 from pydantic import BaseModel
 from ruamel import yaml
 from ruamel.yaml import YAML
 from ruamel.yaml.scanner import ScannerError
+from typing import Any, Dict, Optional, Type
 import ujson as json
+import builtins
+
+from nonebot import logger
 
 
 class Config(BaseModel):

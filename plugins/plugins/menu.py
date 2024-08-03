@@ -4,6 +4,7 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, PrivateMessageEvent
 from nonebot.permission import SUPERUSER
 
+from utils.config import Config
 from utils.permission import ADMIN, AUDIT
 
 
@@ -26,6 +27,7 @@ async def _(bot: Bot, event: PrivateMessageEvent):
     is_admin = await ADMIN(bot, event)
     is_audit = await AUDIT(bot, event)
     is_superuser = await SUPERUSER(bot, event)
+    platform_type = Config.get_value("bot_info", "platform_type")
     data = f"""欢迎使用{list(bot.config.nickname)[0]}
 
 用户功能说明:
@@ -34,16 +36,23 @@ async def _(bot: Bot, event: PrivateMessageEvent):
      - 例: 发帖 对话 实名
      - 不带参数默认为对话和实名
 2. 文章类型说明:
-   - 对话: 发送多条信息，包含文字、图片、视频（不支持非图片形式的表情包和QQ表情包）。记录从开始到发送“结束”命令前的所有信息，类似传统截图表白墙采用方式。
+   - 对话: 发送多条信息，包含文字、图片、视频（不支持非图片形式的表情包和官方表情包）。记录从开始到发送“结束”命令前的所有信息，类似传统截图表白墙采用方式。
    - 文章: 只能发送一条消息，可以包含文字、图片。
 3. 匿名类型说明:
-   - 实名: 公开用户名、QQ号。
+   - 实名: 公开用户名、张号ID。
    - 半实名: 公开头像。
    - 匿名: 不公开任何信息。
 
 表白墙审核机制说明:
 1. 帖子提交后会自动推送给审核组进行审核，匿名状态下审核组无法知道发送者信息（如果有严重违纪行为，机器人维护者有权查看发送者信息）。
 2. 审核通过后，帖子会在一定时间内发布到QQ空间。"""
+    
+    if platform_type in ("onebotv11", "onebotv12", "red", "satori"):
+        data = data.replace("官方表情包", "QQ官方表情包")
+
+    if platform_type == "onebotv12":
+        data = data.replace("、视频", "")
+
     if is_audit:
         data += "\n\n审核组功能说明:\n机器人会自动推送待审核的帖子，请根据提示进行审核。"
     

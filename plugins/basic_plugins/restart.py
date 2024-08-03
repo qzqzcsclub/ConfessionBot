@@ -1,13 +1,19 @@
-from nonebot import on_command, get_driver, logger
-from nonebot.adapters.onebot.v11 import Bot, Event
-from nonebot.permission import SUPERUSER
-from nonebot.params import ArgStr
-from nonebot.rule import to_me
-
 import platform
 import subprocess
 import os
 from pathlib import Path
+
+from nonebot import on_command, get_driver, logger, require
+from nonebot.adapters import Bot, Event
+from nonebot.permission import SUPERUSER
+from nonebot.params import ArgStr
+from nonebot.rule import to_me
+
+require("nonebot_plugin_saa")
+from nonebot_plugin_saa import Text
+
+from utils.api import send_private_msg
+
 
 driver = get_driver()
 
@@ -24,10 +30,10 @@ restart = on_command(
 @restart.got("flag", prompt=f"确定是否重启机器人？确定请回复[是|好|确定]（重启失败咱们将失去联系，请谨慎！）")
 async def _(event: Event, flag: str = ArgStr("flag")):
     if flag.lower() in ["true", "是", "好", "确定", "确定是"]:
-        await restart.send("开始重启机器人..请稍等...")
+        await Text("开始重启机器人..请稍等...").send()
         await bot_restart(event)
     else:
-        await restart.send("已取消操作...")
+        await Text("已取消操作...").send()
 
 
 async def bot_restart(event=None):
@@ -82,9 +88,9 @@ poetry run nb run
         with open(is_restart_file, "r", encoding="utf-8") as f:
             user_id=f.read()
         if user_id:
-            await bot.send_private_msg(
+            await send_private_msg(
                 user_id=int(user_id),
-                message="机器人重启完毕",
+                message=Text("机器人重启完毕"),
             )
         is_restart_file.unlink()
         

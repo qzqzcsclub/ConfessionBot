@@ -1,18 +1,20 @@
-from nonebot import logger, require, get_bot, get_driver
-from nonebot.adapters.qzone import MessageSegment
-
-require("nonebot_plugin_apscheduler")
-
 import os
 import base64
 import datetime
 import ujson as json
 from pathlib import Path
 
+from nonebot import logger, require, get_bot, get_driver
+from nonebot.adapters.qzone import MessageSegment # type: ignore
+
+require("nonebot_plugin_saa")
+from nonebot_plugin_saa import Text
+
+require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 
 from utils.config import Config
-from utils.api_qq import send_private_msg
+from utils.api import send_private_msg
 from utils.database import database_connect, database_unpublished_post_init
 
 
@@ -58,14 +60,14 @@ async def post():
             if post["have_video"]:
                 img_number += post["video_number"]
                 post_occupancy += post["video_number"]
-            if img_number <= max_post or post_number == 0:
+            if img_number <= max_post or post_number == 0: # type: ignore
                 post_number += 1
                 posts_occupancy.append(post_occupancy)
             else:
                 break
         
         # 如果占位数不够就进行时间检查
-        if img_number <= max_post:
+        if img_number <= max_post: # type: ignore
             # 时间检查
             post_time = data_list[0]["commit_time"]
             post_time = datetime.datetime.strptime(post_time, "%Y-%m-%d %H:%M:%S")
@@ -74,7 +76,7 @@ async def post():
             minutes_difference = int(time_difference.total_seconds() / 60)
             max_delay_time = Config.get_value("confession", "max_delay_time")
             # 如果没到达最长等待时间就结束处理
-            if minutes_difference < max_delay_time:
+            if minutes_difference < max_delay_time: # type: ignore
                 return None
             
         bot = get_bot("qzone_bot")
@@ -103,7 +105,7 @@ async def post():
                     for superuser in list(get_driver().config.superusers):
                         await send_private_msg(
                             user_id=int(superuser),
-                            message=f"空间未登录无法发送帖子\n(该问题一天仅提醒一次)"
+                            message=Text(f"空间未登录无法发送帖子\n(该问题一天仅提醒一次)")
                         )
                 cache["cache_update_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cache["NotLoggedIn_alert"] = True
@@ -138,7 +140,7 @@ async def post():
         # 动态发送尝试三次
         for i in range(3):
             try:
-                qzone_post_id, qzone_source_ids= await bot.publish(msg_data)
+                qzone_post_id, qzone_source_ids= await bot.publish(msg_data) # type: ignore
                 break
             except Exception as e:
                 if i == 2:

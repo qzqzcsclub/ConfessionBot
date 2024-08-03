@@ -1,10 +1,16 @@
 {
     "BOT_INFO": {
-        "COMMAND_QQ_ID": {
+        "COMMAND_ID": {
             "value": [],
             "default_value": [],
             "type": "list",
-            "help": "发布和审核帖子的机器人QQ账号(可填写多个)"
+            "help": "发布和审核帖子的机器人账号(可填写多个)"
+        },
+        "PLATFORM_TYPE": {
+            "value": "onebotv11",
+            "default_value": "onebotv11",
+            "type": "str",
+            "help": "发布和审核帖子的机器人平台(可填写 onebotv11 / onebotv12 / red / satori / kaiheila / telegram )"
         }
     },
     "CONFESSION": {
